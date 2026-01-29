@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAGE_TITLE | Parachute Documentation</title>
+    <title>Agents | Parachute Documentation</title>
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="docs.css">
 </head>
@@ -39,7 +39,7 @@
                 <a href="base-overview.html">Overview</a>
                 <a href="base-api.html">API Routes</a>
                 <a href="base-orchestrator.html">Orchestrator</a>
-                <a href="base-agents.html">Agents</a>
+                <a href="base-agents.html" class="active">Agents</a>
                 <a href="base-database.html">Database</a>
             </div>
             <div class="sidebar-section">
@@ -50,27 +50,597 @@
         </aside>
         <main class="docs-content">
             <div class="breadcrumb">
-                <a href="../index.html">Home</a> / <a href="index.html">Docs</a> / <span>PAGE_TITLE</span>
+                <a href="../index.html">Home</a> / <a href="index.html">Docs</a> / <span>Agents</span>
             </div>
-            <h1>PAGE_TITLE</h1>
-            <p class="lead">This page is under construction. Check back soon for detailed documentation.</p>
-            <div class="callout callout-info">
-                <strong>Coming Soon:</strong> This section will contain detailed documentation about this component of the Parachute system.
-            </div>
+            <h1>Agent System</h1>
+            <p class="lead">Parachute's agent system provides custom agents, curator background processing, and scheduled daily agents. Agents can be defined in YAML, JSON, or Markdown with frontmatter, and are discovered automatically from the vault.</p>
+
             <section class="docs-section">
-                <h2>In the Meantime</h2>
-                <p>For now, please refer to these related pages:</p>
-                <div class="nav-cards">
-                    <a href="index.html" class="nav-card">
-                        <h3>🏗️ Architecture</h3>
-                        <p>High-level system overview and key concepts.</p>
-                    </a>
-                    <a href="data-flow.html" class="nav-card">
-                        <h3>🔄 Data Flow</h3>
-                        <p>How data moves through the system.</p>
-                    </a>
+                <h2>Agent Types</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Agent Type</th>
+                            <th>Purpose</th>
+                            <th>Location</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Custom Agents</strong></td>
+                            <td>User-defined agents for Task tool delegation</td>
+                            <td><code>.parachute/agents/</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Chat Curator</strong></td>
+                            <td>Background title updates and chat-log maintenance</td>
+                            <td>Built-in (curator_service.py)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Daily Curator</strong></td>
+                            <td>Morning reflection with music/image generation</td>
+                            <td><code>Daily/.agents/curator.md</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Daily Agents</strong></td>
+                            <td>Scheduled agents processing journal entries</td>
+                            <td><code>Daily/.agents/*.md</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="docs-section">
+                <h2>Agent Definition Format</h2>
+                <p>Custom agents are discovered from three file formats:</p>
+
+                <h3>YAML Format</h3>
+                <div class="code-block">
+                    <pre>
+# .parachute/agents/reviewer.yaml
+description: Reviews code for quality and best practices
+prompt: |
+  You are a code reviewer. Focus on:
+  - Code quality
+  - Security issues
+  - Performance
+tools:
+  - Read
+  - Grep
+  - Glob
+model: sonnet  # optional: sonnet, opus, haiku</pre>
+                </div>
+
+                <h3>Markdown Format (with frontmatter)</h3>
+                <div class="code-block">
+                    <pre>
+# .parachute/agents/reviewer.md
+---
+description: Reviews code
+tools: [Read, Grep]
+model: sonnet
+---
+
+# Agent Prompt
+
+You are a code reviewer...</pre>
+                </div>
+
+                <h3>AgentConfig Fields</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Type</th>
+                            <th>Required</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>name</code></td>
+                            <td>string</td>
+                            <td>Yes</td>
+                            <td>Agent identifier (derived from filename)</td>
+                        </tr>
+                        <tr>
+                            <td><code>description</code></td>
+                            <td>string</td>
+                            <td>Yes</td>
+                            <td>Brief description shown in Task tool</td>
+                        </tr>
+                        <tr>
+                            <td><code>prompt</code></td>
+                            <td>string</td>
+                            <td>Yes</td>
+                            <td>System prompt for the agent</td>
+                        </tr>
+                        <tr>
+                            <td><code>tools</code></td>
+                            <td>list</td>
+                            <td>No</td>
+                            <td>Allowed tools (Read, Grep, Glob, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td><code>model</code></td>
+                            <td>string</td>
+                            <td>No</td>
+                            <td>Model override (sonnet, opus, haiku)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="docs-section">
+                <h2>Chat Curator</h2>
+                <p>The chat curator is a background agent that runs after each message to maintain session metadata.</p>
+
+                <h3>Curator Task Queue</h3>
+                <div class="code-block">
+                    <pre>
+Message Completes
+        │
+        ▼
+queue_task(parent_session_id, trigger_type, message_count)
+        │
+        ▼
+curator_queue table (status: pending)
+        │
+        ▼
+Worker Loop (FIFO, one at a time)
+        │
+        ├── Fresh curator: Load full transcript from last compact
+        │
+        └── Incremental: Get only new messages
+        │
+        ▼
+Curator Agent Runs (max 5 turns)
+        │
+        ├── update_title - Set session title
+        │
+        ├── get_session_log - Read today's chat-log
+        │
+        └── update_session_log - Write to Daily/chat-log/
+        │
+        ▼
+Status: completed/failed</pre>
+                </div>
+
+                <h3>Curator MCP Tools</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tool</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>update_title</code></td>
+                            <td>Update session title (max 100 chars)</td>
+                        </tr>
+                        <tr>
+                            <td><code>get_session_log</code></td>
+                            <td>Read today's chat-log entry</td>
+                        </tr>
+                        <tr>
+                            <td><code>update_session_log</code></td>
+                            <td>Create/update Daily/chat-log/{date}.md</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Chat Log Format</h3>
+                <div class="code-block">
+                    <pre>
+---
+date: 2026-01-28
+entries:
+  rhxo89:
+    type: session
+    created: "14:30"
+    session: uuid-here
+    modified: "14:35"
+---
+
+# para:rhxo89 14:30
+
+**Fixing curator MCP tools**
+
+[Open session](parachute://chat/session/uuid-here)
+
+Fixed the curator agent in Parachute's base server...
+
+---
+
+# para:abc123 15:00
+
+**Another session**
+...</pre>
                 </div>
             </section>
+
+            <section class="docs-section">
+                <h2>Daily Agents</h2>
+                <p>Daily agents are scheduled to run automatically and process journal entries.</p>
+
+                <h3>Daily Agent Configuration</h3>
+                <div class="code-block">
+                    <pre>
+# Daily/.agents/content-scout.md
+---
+displayName: Content Scout
+description: Extracts valuable insights from daily work
+schedule:
+  enabled: true
+  time: "3:00"  # 3:00 AM UTC
+output:
+  path: "Daily/content-scout/{date}.md"
+tools:
+  - read_journal
+  - read_chat_log
+  - read_recent_journals
+---
+
+You are a content scout that discovers valuable insights...</pre>
+                </div>
+
+                <h3>DailyAgentConfig Fields</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Type</th>
+                            <th>Default</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>displayName</code></td>
+                            <td>string</td>
+                            <td>Derived from filename</td>
+                        </tr>
+                        <tr>
+                            <td><code>description</code></td>
+                            <td>string</td>
+                            <td>Required</td>
+                        </tr>
+                        <tr>
+                            <td><code>schedule.enabled</code></td>
+                            <td>boolean</td>
+                            <td>true</td>
+                        </tr>
+                        <tr>
+                            <td><code>schedule.time</code></td>
+                            <td>string</td>
+                            <td>"3:00" (UTC)</td>
+                        </tr>
+                        <tr>
+                            <td><code>output.path</code></td>
+                            <td>string</td>
+                            <td>Daily/{name}/{date}.md</td>
+                        </tr>
+                        <tr>
+                            <td><code>tools</code></td>
+                            <td>list</td>
+                            <td>All daily tools</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Daily Agent Tools</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tool</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>read_journal(date)</code></td>
+                            <td>Read Daily/journals/{date}.md</td>
+                        </tr>
+                        <tr>
+                            <td><code>read_chat_log(date)</code></td>
+                            <td>Read Daily/chat-log/{date}.md (truncated 10K)</td>
+                        </tr>
+                        <tr>
+                            <td><code>read_recent_journals(days)</code></td>
+                            <td>Read last N days of journals (max 30)</td>
+                        </tr>
+                        <tr>
+                            <td><code>read_recent_sessions(days)</code></td>
+                            <td>Read last N days of chat logs (max 30)</td>
+                        </tr>
+                        <tr>
+                            <td><code>write_output(date, content)</code></td>
+                            <td>Write to configured output path</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="docs-section">
+                <h2>Daily Curator (Morning Reflection)</h2>
+                <p>A special daily agent that creates morning reflections with creative media.</p>
+
+                <h3>Default Behavior</h3>
+                <ul>
+                    <li><strong>Timing:</strong> Runs in morning (configurable)</li>
+                    <li><strong>Input:</strong> Yesterday's journal + chat-log</li>
+                    <li><strong>Output:</strong> Daily/reflections/{tomorrow}.md</li>
+                    <li><strong>Creative:</strong> Generates song (Suno) + image (Glif)</li>
+                </ul>
+
+                <h3>Output Format</h3>
+                <div class="code-block">
+                    <pre>
+---
+date: 2026-01-28
+generated_at: 2026-01-28T08:15:30.123456+00:00
+---
+
+# Today's Reflection
+
+Warm, thoughtful reflection (3-5 paragraphs)
+connecting journal and chat logs...
+
+## Today's Song
+
+[Song Title](https://suno.com/...)
+
+## Today's Image
+
+![State Visualization](https://glif.app/...)</pre>
+                </div>
+
+                <h3>Curator Tools</h3>
+                <ul>
+                    <li><code>read_journal</code> - Yesterday's journal</li>
+                    <li><code>read_chat_log</code> - Yesterday's AI conversations</li>
+                    <li><code>read_recent_journals</code> - Pattern recognition</li>
+                    <li><code>write_reflection</code> - Output to reflections/</li>
+                    <li><strong>Vault MCPs:</strong> Suno (music), Glif (images), search</li>
+                </ul>
+            </section>
+
+            <section class="docs-section">
+                <h2>Scheduler Integration</h2>
+                <p>Daily agents are scheduled using APScheduler with cron triggers.</p>
+
+                <h3>Scheduler Lifecycle</h3>
+                <div class="code-block">
+                    <pre>
+init_scheduler(vault_path)
+        │
+        ├── Create AsyncIOScheduler
+        │
+        ├── Discover agents from Daily/.agents/*.md
+        │
+        ├── For each agent with schedule.enabled:
+        │       │
+        │       └── Add CronTrigger job
+        │
+        └── Start scheduler</pre>
+                </div>
+
+                <h3>Status Monitoring</h3>
+                <div class="code-block">
+                    <pre>
+get_scheduler_status(vault_path) → {
+  "running": true,
+  "jobs": [
+    {
+      "id": "daily_content-scout",
+      "name": "Content Scout",
+      "next_run": "2026-01-29T03:00:00",
+      "trigger": "cron[hour='3', minute='0']"
+    }
+  ],
+  "agents": {
+    "content-scout": {
+      "enabled": true,
+      "hour": 3,
+      "minute": 0,
+      "display_name": "Content Scout"
+    }
+  }
+}</pre>
+                </div>
+            </section>
+
+            <section class="docs-section">
+                <h2>State Persistence</h2>
+                <p>Agent state is persisted for session continuity across runs.</p>
+
+                <h3>Daily Agent State</h3>
+                <div class="code-block">
+                    <pre>
+# Daily/.{agent_name}/state.json
+{
+  "agent": "content-scout",
+  "backend": "claude-sdk",
+  "sdk_session_id": "uuid-here",  # Resume point
+  "model": null,
+  "last_run_at": "2026-01-28T08:15:30.123456+00:00",
+  "last_processed_date": "2026-01-27",
+  "run_count": 42,
+  "created_at": "2026-01-01T12:00:00+00:00"
+}</pre>
+                </div>
+
+                <h3>Curator State</h3>
+                <div class="code-block">
+                    <pre>
+# Daily/.curator/state.json
+{
+  "module": "daily",
+  "backend": "claude-sdk",
+  "sdk_session_id": null,
+  "model": null,
+  "last_run_at": "2026-01-28T10:30:00+00:00",
+  "last_processed_date": "2026-01-27",
+  "run_count": 28,
+  "created_at": "2026-01-01T12:00:00+00:00"
+}</pre>
+                </div>
+            </section>
+
+            <section class="docs-section">
+                <h2>User Context System</h2>
+                <p>Agents can be personalized with user context loaded from the vault.</p>
+
+                <h3>Context Loading</h3>
+                <div class="code-block">
+                    <pre>
+load_user_context(vault_path) → (user_name, context_text)
+        │
+        ├── Read context/curator.md
+        │
+        ├── Resolve @ references:
+        │       @parachute/profile.md
+        │       @parachute/projects.md
+        │
+        └── Extract **Name**: field for personalization</pre>
+                </div>
+
+                <h3>@ Reference Resolution</h3>
+                <ul>
+                    <li>Supports recursive file references</li>
+                    <li>Max recursion: 3 levels to prevent loops</li>
+                    <li>Injected into agent prompts via <code>{user_name}</code>, <code>{user_context}</code></li>
+                </ul>
+            </section>
+
+            <section class="docs-section">
+                <h2>Tool Availability by Agent Type</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Agent Type</th>
+                            <th>Tools</th>
+                            <th>MCP Servers</th>
+                            <th>Resumable</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Chat Curator</td>
+                            <td>update_title, get_session_log, update_session_log</td>
+                            <td>curator (stdio)</td>
+                            <td>Yes</td>
+                        </tr>
+                        <tr>
+                            <td>Daily Curator</td>
+                            <td>read_journal, read_chat_log, read_recent_journals, write_reflection</td>
+                            <td>daily_curator + vault MCPs</td>
+                            <td>Yes</td>
+                        </tr>
+                        <tr>
+                            <td>Daily Agent</td>
+                            <td>read_*, write_output</td>
+                            <td>daily_{name} + vault MCPs</td>
+                            <td>Yes</td>
+                        </tr>
+                        <tr>
+                            <td>Custom Agent</td>
+                            <td>As defined in config</td>
+                            <td>None (SDK inline)</td>
+                            <td>No</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="docs-section">
+                <h2>Key Files</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>agents.py</code></td>
+                            <td>Agent discovery and definition parsing</td>
+                        </tr>
+                        <tr>
+                            <td><code>agent_loader.py</code></td>
+                            <td>Extended agent parsing with permissions/constraints</td>
+                        </tr>
+                        <tr>
+                            <td><code>curator_service.py</code></td>
+                            <td>Chat curator with task queue and MCP integration</td>
+                        </tr>
+                        <tr>
+                            <td><code>curator_mcp_server.py</code></td>
+                            <td>Stdio MCP server for curator tools</td>
+                        </tr>
+                        <tr>
+                            <td><code>daily_curator.py</code></td>
+                            <td>Morning reflection agent with Suno/Glif</td>
+                        </tr>
+                        <tr>
+                            <td><code>daily_agent.py</code></td>
+                            <td>Generic daily agent framework</td>
+                        </tr>
+                        <tr>
+                            <td><code>daily_agent_tools.py</code></td>
+                            <td>MCP tools for daily agents</td>
+                        </tr>
+                        <tr>
+                            <td><code>scheduler.py</code></td>
+                            <td>APScheduler integration with cron triggers</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="docs-section">
+                <h2>Architecture Summary</h2>
+                <div class="code-block">
+                    <pre>
+┌─────────────────────────────────────────────────────────┐
+│                    Agent System                         │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  Custom Agents (.parachute/agents/)                     │
+│      │                                                  │
+│      └──► Task Tool Delegation                          │
+│                                                         │
+│  Chat Curator (built-in)                                │
+│      │                                                  │
+│      ├──► curator_queue (FIFO)                          │
+│      │                                                  │
+│      └──► Title Updates + Chat Log                      │
+│                                                         │
+│  Daily Agents (Daily/.agents/)                          │
+│      │                                                  │
+│      ├──► APScheduler (cron)                            │
+│      │                                                  │
+│      └──► Journal Processing → Output                   │
+│                                                         │
+│  Daily Curator                                          │
+│      │                                                  │
+│      └──► Morning Reflection + Media                    │
+│                                                         │
+└─────────────────────────────────────────────────────────┘</pre>
+                </div>
+            </section>
+
+            <div class="nav-cards">
+                <a href="base-orchestrator.html" class="nav-card">
+                    <h3>Orchestrator</h3>
+                    <p>Agent execution and streaming.</p>
+                </a>
+                <a href="base-database.html" class="nav-card">
+                    <h3>Database</h3>
+                    <p>SQLite schema and session storage.</p>
+                </a>
+            </div>
         </main>
     </div>
     <footer>
