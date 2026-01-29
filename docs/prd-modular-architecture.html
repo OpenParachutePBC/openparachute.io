@@ -293,6 +293,7 @@
                     <li><a href="#flutter">Flutter App Architecture</a></li>
                     <li><a href="#sandboxing">Sandboxing &amp; Permissions</a></li>
                     <li><a href="#communication">Inter-Module Communication</a></li>
+                    <li><a href="#hooks">Hooks System</a></li>
                     <li><a href="#migration">Migration Plan</a></li>
                     <li><a href="#questions">Open Questions</a></li>
                 </ol>
@@ -642,21 +643,59 @@ class DailyModule(Module):
                         Brain Module
                         <span class="module-type">Built-in (New)</span>
                     </h4>
-                    <p>Structured knowledge graph for entities and relationships. Think Obsidian's knowledge graph + CRM capabilities.</p>
+                    <p>Structured knowledge graph with <strong>dynamic entity types</strong>. Think Obsidian's knowledge graph + flexible CRM. Entity types are user-defined and can be suggested by Daily based on journal content.</p>
                     <p><strong>Data Location:</strong> <code>~/Parachute/Brain/</code></p>
                     <div class="module-features">
-                        <span>Entity management</span>
+                        <span>Dynamic entity types</span>
                         <span>Para-ID linking</span>
                         <span>Alias resolution</span>
                         <span>Relationship graph</span>
                         <span>Semantic search</span>
                         <span>Mention detection</span>
+                        <span>Type suggestions</span>
                     </div>
-                    <p style="margin-top: 1rem; font-size: 0.9rem;"><strong>MCP Tools:</strong> <code>brain-search</code>, <code>brain-resolve</code>, <code>brain-link</code>, <code>brain-suggest</code></p>
-                    <p style="font-size: 0.9rem;"><strong>Events:</strong> <code>brain.entity.created</code>, <code>brain.mention.detected</code></p>
+                    <p style="margin-top: 1rem; font-size: 0.9rem;"><strong>MCP Tools:</strong> <code>brain-search</code>, <code>brain-resolve</code>, <code>brain-link</code>, <code>brain-suggest</code>, <code>brain-types</code></p>
+                    <p style="font-size: 0.9rem;"><strong>Events:</strong> <code>brain.entity.created</code>, <code>brain.mention.detected</code>, <code>brain.type.suggested</code></p>
                 </div>
 
-                <h3>Brain Module: Entity Structure</h3>
+                <h3>Dynamic Entity Types</h3>
+                <p>Entity types are not hardcoded. Users start with sensible defaults (People, Projects, Topics, Resources) but can create their own. Daily can suggest new types based on journal content.</p>
+                <div class="code-block">
+                    <div class="code-header">Brain/types.yaml</div>
+                    <pre><code>types:
+  person:
+    icon: "👤"
+    folder: "people"
+    fields: [aliases, tags, relationships]
+
+  project:
+    icon: "📁"
+    folder: "projects"
+    fields: [status, aliases, tags, relationships]
+
+  topic:
+    icon: "💡"
+    folder: "topics"
+    fields: [aliases, tags]
+
+  resource:
+    icon: "📚"
+    folder: "resources"
+    fields: [url, aliases, tags]
+
+  # User-defined types
+  organization:
+    icon: "🏢"
+    folder: "organizations"
+    fields: [type, aliases, tags, relationships]
+
+  event:
+    icon: "📅"
+    folder: "events"
+    fields: [date, location, attendees]</code></pre>
+                </div>
+
+                <h3>Entity File Structure</h3>
                 <p>Entities are markdown files with YAML frontmatter. The para_id system enables stable references across name changes.</p>
                 <div class="code-block">
                     <div class="code-header">Brain/entities/people/kevin-regen-hub.md</div>
@@ -935,80 +974,153 @@ Journal Entry: "Met with Kevin about the LVB curriculum"
                 </div>
             </section>
 
+            <!-- Hooks System -->
+            <section class="docs-section" id="hooks">
+                <h2>Hooks System</h2>
+                <p>User-configurable scripts triggered by system events. More flexible than hardcoded curator logic.</p>
+
+                <div class="code-block">
+                    <div class="code-header">~/.parachute/hooks/</div>
+                    <pre><code>hooks/
+├── on-session-start.py    # Load context files, inject memory
+├── on-session-end.py      # Summarize to memory, cleanup
+├── on-daily-entry.py      # Trigger reflection, link mentions
+├── on-context-limit.py    # Memory flush before compaction
+└── on-project-mention.py  # Load project AGENTS.md</code></pre>
+                </div>
+
+                <h3>Hook Interface</h3>
+                <div class="code-block">
+                    <div class="code-header">hooks/on-daily-entry.py</div>
+                    <pre><code>from parachute.hooks import Hook, context
+
+class OnDailyEntry(Hook):
+    """Triggered when a new journal entry is created."""
+
+    event = "daily.entry.created"
+
+    async def run(self, entry_id: str, content: str):
+        # Detect mentions and link to Brain
+        mentions = await context.brain.suggest(content)
+
+        for mention in mentions:
+            if mention.confidence > 0.8:
+                await context.brain.link(entry_id, mention.para_id)
+
+        # Maybe trigger reflection if conditions met
+        if self.should_reflect(content):
+            await context.daily.trigger_reflection(entry_id)</code></pre>
+                </div>
+
+                <h3>Hook Events</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Trigger</th>
+                            <th>Context Provided</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>session.start</code></td>
+                            <td>New chat/daily session begins</td>
+                            <td>session_id, module, working_directory</td>
+                        </tr>
+                        <tr>
+                            <td><code>session.end</code></td>
+                            <td>Session closes or times out</td>
+                            <td>session_id, message_count, duration</td>
+                        </tr>
+                        <tr>
+                            <td><code>daily.entry.created</code></td>
+                            <td>New journal entry saved</td>
+                            <td>entry_id, content, audio_path</td>
+                        </tr>
+                        <tr>
+                            <td><code>context.limit.approaching</code></td>
+                            <td>Context window 80% full</td>
+                            <td>session_id, token_count, threshold</td>
+                        </tr>
+                        <tr>
+                            <td><code>brain.mention.detected</code></td>
+                            <td>Entity mentioned in text</td>
+                            <td>source_id, para_id, confidence</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="callout callout-info">
+                    <strong>vs. Curator:</strong> Hooks are user-configurable and event-driven. The current curator approach becomes a default hook that users can modify or replace.
+                </div>
+            </section>
+
             <!-- Migration Plan -->
             <section class="docs-section" id="migration">
                 <h2>Migration Plan</h2>
-                <p>Phased approach to restructuring without breaking current functionality.</p>
+                <p>Aggressive 1-2 week sprint to restructure. Testing with a separate server instance and unique Flutter app on a sample vault.</p>
+
+                <div class="callout callout-info">
+                    <strong>Approach:</strong> Full restructure in one focused push rather than incremental migration. Parallel development on separate test environment.
+                </div>
 
                 <div class="phase-card">
                     <h4>
                         <span class="phase-number">1</span>
-                        Foundation
-                        <span class="phase-weeks">Weeks 1-2</span>
+                        Core &amp; Module System
+                        <span class="phase-weeks">Days 1-3</span>
                     </h4>
-                    <p>Extract core without breaking current functionality.</p>
+                    <p>Build the foundation and module infrastructure.</p>
                     <ul>
                         <li>Create <code>parachute.core</code> Python package (SDK wrapper, permissions, database)</li>
-                        <li>Define Module base class and decorators</li>
-                        <li>Refactor current code as modules (keep same structure)</li>
-                        <li>Add <code>modules.yaml</code> configuration</li>
+                        <li>Define Module base class with route/MCP/event decorators</li>
+                        <li>Implement module discovery from <code>modules.yaml</code></li>
+                        <li>Set up hooks system (<code>.hooks/</code> directory)</li>
                     </ul>
                 </div>
 
                 <div class="phase-card">
                     <h4>
                         <span class="phase-number">2</span>
-                        Separation
-                        <span class="phase-weeks">Weeks 3-4</span>
+                        Core Modules
+                        <span class="phase-weeks">Days 4-6</span>
                     </h4>
-                    <p>Modules become truly independent.</p>
+                    <p>Daily, Chat, and Brain as proper modules.</p>
                     <ul>
-                        <li>Separate module routes (<code>/api/daily/*</code>, <code>/api/chat/*</code>)</li>
-                        <li>Implement event bus for cross-module communication</li>
-                        <li>Create Brain module (entity CRUD, search, linking)</li>
-                        <li>Connect Daily → Brain for mention detection</li>
+                        <li>Refactor Daily as module with <code>/api/daily/*</code> routes</li>
+                        <li>Refactor Chat as module with <code>/api/chat/*</code> routes</li>
+                        <li>Create Brain module (dynamic entity types, search, linking)</li>
+                        <li>Implement event bus + Daily → Brain integration</li>
                     </ul>
                 </div>
 
                 <div class="phase-card">
                     <h4>
                         <span class="phase-number">3</span>
-                        Flutter Restructure
-                        <span class="phase-weeks">Weeks 5-6</span>
+                        Flutter Packages
+                        <span class="phase-weeks">Days 7-9</span>
                     </h4>
-                    <p>Separate apps sharing core package.</p>
+                    <p>Modular Flutter architecture.</p>
                     <ul>
-                        <li>Create <code>parachute_core</code> Flutter package</li>
+                        <li>Extract <code>parachute_core</code> Flutter package</li>
                         <li>Create <code>parachute_daily</code> and <code>parachute_chat</code> packages</li>
-                        <li>Build standalone Daily app and verify module communication</li>
+                        <li>Build standalone Daily app targeting new module API</li>
+                        <li>Verify end-to-end on test vault</li>
                     </ul>
                 </div>
 
                 <div class="phase-card">
                     <h4>
                         <span class="phase-number">4</span>
-                        Sandboxing
-                        <span class="phase-weeks">Weeks 7-8</span>
+                        Sandboxing &amp; Polish
+                        <span class="phase-weeks">Days 10-14</span>
                     </h4>
-                    <p>Security and isolation.</p>
+                    <p>Security, isolation, and production readiness.</p>
                     <ul>
-                        <li>Dockerize base server (volumes, HOME override)</li>
-                        <li>Implement user module containers with permission-based mounts</li>
-                        <li>Build Computer management UI (module listing, permissions)</li>
-                    </ul>
-                </div>
-
-                <div class="phase-card">
-                    <h4>
-                        <span class="phase-number">5</span>
-                        Polish &amp; Launch
-                        <span class="phase-weeks">Weeks 9-10</span>
-                    </h4>
-                    <p>Production ready.</p>
-                    <ul>
-                        <li>End-to-end testing across all modules</li>
-                        <li>Documentation (module development guide, API reference)</li>
-                        <li>Release: Parachute Daily standalone, Parachute Computer full package</li>
+                        <li>Dockerize base server with volume mounts</li>
+                        <li>Permission enforcement in main container (trusted modules)</li>
+                        <li>Separate container setup for untrusted modules</li>
+                        <li>Computer management UI (if time permits, otherwise Phase 2)</li>
                     </ul>
                 </div>
             </section>
