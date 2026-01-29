@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRD: Modular Architecture | Parachute Documentation</title>
+    <meta name="description" content="Product Requirements Document for restructuring Parachute as a modular personal computer platform">
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="docs.css">
+    <style>
+        /* PRD-specific styles */
+        .prd-header {
+            background: linear-gradient(135deg, rgba(107, 159, 255, 0.1) 0%, rgba(107, 255, 159, 0.05) 100%);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        .prd-header h1 {
+            margin-bottom: 0.5rem;
+        }
+        .prd-meta {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: var(--fg-muted);
+        }
+        .prd-meta strong {
+            color: var(--fg);
+        }
+        .prd-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: rgba(255, 179, 71, 0.2);
+            color: #ffb347;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .principle-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        .principle-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+        }
+        .principle-card h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--accent);
+            font-size: 1rem;
+        }
+        .principle-card p {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+        .toc {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+        .toc h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            color: var(--fg);
+        }
+        .toc ol {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+        .toc li {
+            margin-bottom: 0.5rem;
+        }
+        .toc a {
+            color: var(--fg-muted);
+            text-decoration: none;
+        }
+        .toc a:hover {
+            color: var(--accent);
+        }
+        .module-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .module-card h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--fg);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .module-card .module-icon {
+            font-size: 1.5rem;
+        }
+        .module-card .module-type {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            background: var(--accent);
+            color: var(--bg);
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .module-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .module-features span {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(107, 159, 255, 0.1);
+            color: var(--accent);
+            border-radius: 4px;
+        }
+        .phase-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--accent);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .phase-card h4 {
+            margin: 0 0 0.5rem 0;
+            color: var(--fg);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .phase-card .phase-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: var(--accent);
+            color: var(--bg);
+            border-radius: 50%;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .phase-card .phase-weeks {
+            font-size: 0.8rem;
+            color: var(--fg-muted);
+            margin-left: auto;
+        }
+        .question-list {
+            counter-reset: question;
+        }
+        .question-list li {
+            counter-increment: question;
+            position: relative;
+            padding-left: 2rem;
+            margin-bottom: 1rem;
+        }
+        .question-list li::before {
+            content: counter(question);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 1.5rem;
+            height: 1.5rem;
+            background: rgba(107, 159, 255, 0.2);
+            color: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .comparison-table {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .comparison-side {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        .comparison-side h4 {
+            margin-top: 0;
+            color: var(--accent);
+            font-size: 1rem;
+        }
+        .comparison-side pre {
+            font-size: 0.75rem;
+            line-height: 1.5;
+            color: var(--fg-muted);
+            margin: 0;
+        }
+        @media (max-width: 900px) {
+            .principle-grid {
+                grid-template-columns: 1fr;
+            }
+            .comparison-table {
+                grid-template-columns: 1fr;
+            }
+            .prd-meta {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="../index.html" class="logo">Open Parachute</a>
+            <div class="nav-links">
+                <a href="index.html" class="active">Docs</a>
+                <a href="../roadmap.html">Roadmap</a>
+                <a href="https://github.com/OpenParachutePBC" target="_blank">GitHub</a>
+            </div>
+        </nav>
+    </header>
+    <div class="docs-layout">
+        <aside class="docs-sidebar">
+            <div class="sidebar-section">
+                <h3>Overview</h3>
+                <a href="index.html">Architecture</a>
+                <a href="data-flow.html">Data Flow</a>
+                <a href="integration.html">Integration</a>
+            </div>
+            <div class="sidebar-section">
+                <h3>App (Flutter)</h3>
+                <a href="app-overview.html">Overview</a>
+                <a href="app-chat.html">Chat Feature</a>
+                <a href="app-daily.html">Daily Feature</a>
+                <a href="app-vault.html">Vault Feature</a>
+                <a href="app-services.html">Services</a>
+            </div>
+            <div class="sidebar-section">
+                <h3>Base (Python)</h3>
+                <a href="base-overview.html">Overview</a>
+                <a href="base-api.html">API Routes</a>
+                <a href="base-orchestrator.html">Orchestrator</a>
+                <a href="base-agents.html">Agents</a>
+                <a href="base-database.html">Database</a>
+            </div>
+            <div class="sidebar-section">
+                <h3>Planning</h3>
+                <a href="prd-modular-architecture.html" class="active">PRD: Modular Architecture</a>
+            </div>
+            <div class="sidebar-section">
+                <h3>Reference</h3>
+                <a href="issues.html">Issues &amp; TODOs</a>
+                <a href="file-manifest.html">File Manifest</a>
+            </div>
+        </aside>
+        <main class="docs-content">
+            <div class="breadcrumb">
+                <a href="../index.html">Home</a> / <a href="index.html">Docs</a> / <span>PRD: Modular Architecture</span>
+            </div>
+
+            <!-- Header -->
+            <div class="prd-header">
+                <span class="prd-status">Draft</span>
+                <h1>PRD: Modular Parachute Computer</h1>
+                <p class="lead">Restructuring Parachute from a monolithic application into a modular personal computer platform.</p>
+                <div class="prd-meta">
+                    <span><strong>Version:</strong> 0.1.0</span>
+                    <span><strong>Date:</strong> January 29, 2026</span>
+                    <span><strong>Author:</strong> Aaron Gabriel</span>
+                </div>
+            </div>
+
+            <!-- Table of Contents -->
+            <div class="toc">
+                <h3>Contents</h3>
+                <ol>
+                    <li><a href="#vision">Vision &amp; Principles</a></li>
+                    <li><a href="#architecture">Architecture Overview</a></li>
+                    <li><a href="#core">Parachute Computer Core</a></li>
+                    <li><a href="#modules">Module System</a></li>
+                    <li><a href="#core-modules">Core Modules (Daily, Chat, Brain)</a></li>
+                    <li><a href="#flutter">Flutter App Architecture</a></li>
+                    <li><a href="#sandboxing">Sandboxing &amp; Permissions</a></li>
+                    <li><a href="#communication">Inter-Module Communication</a></li>
+                    <li><a href="#migration">Migration Plan</a></li>
+                    <li><a href="#questions">Open Questions</a></li>
+                </ol>
+            </div>
+
+            <!-- Executive Summary -->
+            <section class="docs-section">
+                <h2>Executive Summary</h2>
+                <p>Parachute is evolving from a monolithic application into a <strong>modular personal computer platform</strong>. This PRD defines the architecture for:</p>
+                <ul>
+                    <li><strong>Parachute Computer</strong> - The foundational platform (Python server + management UI)</li>
+                    <li><strong>Module System</strong> - Discoverable, sandboxed modules that extend functionality</li>
+                    <li><strong>Core Modules</strong> - Daily, Chat, and Brain as the first three modules</li>
+                    <li><strong>Flutter App Architecture</strong> - Shared <code>parachute_core</code> package with separate apps</li>
+                </ul>
+                <div class="callout callout-info">
+                    <strong>The Goal:</strong> Create a truly personal computer where the core platform rarely changes, but users can extend functionality through modules living in their vault.
+                </div>
+            </section>
+
+            <!-- Vision & Principles -->
+            <section class="docs-section" id="vision">
+                <h2>Vision &amp; Principles</h2>
+
+                <h3>The Core Insight</h3>
+                <p><strong>Parachute Computer should be a platform, not an application.</strong></p>
+                <p>The current monolith tightly couples Chat, Daily, and Vault. This restructuring inverts the relationship: Parachute Computer becomes the foundation, and modules plug into it.</p>
+
+                <h3>Guiding Principles</h3>
+                <div class="principle-grid">
+                    <div class="principle-card">
+                        <h4>Vault-Centric</h4>
+                        <p>The user's vault (<code>~/Parachute</code>) is the source of truth. Modules, configurations, and data live there. The platform serves the vault.</p>
+                    </div>
+                    <div class="principle-card">
+                        <h4>Local-First</h4>
+                        <p>Everything runs on the user's machine. No cloud dependency. Data never leaves without explicit action.</p>
+                    </div>
+                    <div class="principle-card">
+                        <h4>Module Independence</h4>
+                        <p>Modules can be developed, tested, and deployed independently. A bug in one module shouldn't crash others.</p>
+                    </div>
+                    <div class="principle-card">
+                        <h4>Progressive Disclosure</h4>
+                        <p>The default experience is simple (Daily + Chat). Power users can add modules, configure permissions, build their own.</p>
+                    </div>
+                    <div class="principle-card">
+                        <h4>Interoperability</h4>
+                        <p>Modules communicate through standard interfaces (HTTP, MCP). No tight coupling between modules.</p>
+                    </div>
+                    <div class="principle-card">
+                        <h4>User Ownership</h4>
+                        <p>Users own their modules. They can inspect, modify, fork, and share them freely.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Architecture Overview -->
+            <section class="docs-section" id="architecture">
+                <h2>Architecture Overview</h2>
+                <div class="architecture-visual">
+                    <pre>
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         Flutter Apps (Separate Packages)                     │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────────────────┐  │
+│  │ Parachute Daily │  │ Parachute Chat  │  │ Parachute Computer          │  │
+│  │ (journaling)    │  │ (conversation)  │  │ (module management)         │  │
+│  └────────┬────────┘  └────────┬────────┘  └─────────────┬───────────────┘  │
+│           │                    │                         │                   │
+│  ┌────────┴────────────────────┴─────────────────────────┴───────────────┐  │
+│  │                    parachute_core (Flutter package)                    │  │
+│  │  • Server connection   • Auth/API keys     • Theming/Design tokens    │  │
+│  │  • Common widgets      • Sync service      • Transcription (optional) │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      │
+                                HTTP/SSE
+                                      │
+┌─────────────────────────────────────┴───────────────────────────────────────┐
+│                    Parachute Computer (Python Server)                        │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                         Core Router (FastAPI)                          │ │
+│  │  /api/modules/*  → Module Management                                   │ │
+│  │  /api/daily/*    → Daily Module                                        │ │
+│  │  /api/chat/*     → Chat Module                                         │ │
+│  │  /api/brain/*    → Brain Module                                        │ │
+│  │  /api/{custom}/* → User-defined Modules                                │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                    parachute.core (Python package)                     │ │
+│  │  • Claude SDK wrapper      • Module discovery & lifecycle              │ │
+│  │  • Permissions/Sandboxing  • Database layer (SQLite)                   │ │
+│  │  • File access (gated)     • MCP infrastructure                        │ │
+│  │  • Hooks system            • Event bus                                 │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │                         Module Containers                             │   │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌────────────┐  │   │
+│  │  │ Daily       │  │ Chat        │  │ Brain       │  │ User       │  │   │
+│  │  │ Module      │  │ Module      │  │ Module      │  │ Modules    │  │   │
+│  │  │ (built-in)  │  │ (built-in)  │  │ (built-in)  │  │ (from vault)│  │   │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  └────────────┘  │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+│                          │ Docker sandbox boundary │                         │
+└──────────────────────────┴─────────────────────────┴────────────────────────┘
+                                      │
+                            ~/Parachute (vault)</pre>
+                </div>
+
+                <h3>Key Architectural Changes</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Current</th>
+                            <th>Future</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Single monolithic Flutter app</td>
+                            <td>Multiple apps sharing <code>parachute_core</code> package</td>
+                        </tr>
+                        <tr>
+                            <td>Hardcoded features (Chat, Daily, Vault)</td>
+                            <td>Discoverable modules that register routes</td>
+                        </tr>
+                        <tr>
+                            <td>Lima VM for isolation</td>
+                            <td>Bare metal + Docker containers for sandboxing</td>
+                        </tr>
+                        <tr>
+                            <td>Settings screen for configuration</td>
+                            <td>Parachute Computer UI for module management</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Parachute Computer Core -->
+            <section class="docs-section" id="core">
+                <h2>Parachute Computer Core</h2>
+                <p>The core platform provides foundational services that all modules depend on.</p>
+
+                <h3>Core Services</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th>Purpose</th>
+                            <th>Access</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Claude SDK Wrapper</strong></td>
+                            <td>Unified interface to Claude Agent SDK with HOME override for vault-portable sessions</td>
+                            <td>All modules</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Permission Handler</strong></td>
+                            <td>Enforce read/write/bash permissions per module</td>
+                            <td>All modules</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Database Layer</strong></td>
+                            <td>SQLite operations (sessions, metadata, chunks)</td>
+                            <td>Via core API</td>
+                        </tr>
+                        <tr>
+                            <td><strong>File Access</strong></td>
+                            <td>Gated filesystem operations respecting permissions</td>
+                            <td>Per-module</td>
+                        </tr>
+                        <tr>
+                            <td><strong>MCP Infrastructure</strong></td>
+                            <td>Spawn and manage MCP servers for agent tools</td>
+                            <td>Module-declared</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Event Bus</strong></td>
+                            <td>Publish/subscribe for cross-module events</td>
+                            <td>All modules</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Module Discovery</strong></td>
+                            <td>Find, load, validate modules from config</td>
+                            <td>Core only</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Configuration</h3>
+                <p>Module registry at <code>~/.parachute/modules.yaml</code>:</p>
+                <div class="code-block">
+                    <div class="code-header">modules.yaml</div>
+                    <pre><code>modules:
+  daily:
+    enabled: true
+    source: builtin
+    version: "1.0.0"
+
+  chat:
+    enabled: true
+    source: builtin
+    version: "1.0.0"
+
+  brain:
+    enabled: true
+    source: builtin
+    version: "1.0.0"
+
+  my-crm:
+    enabled: true
+    source: vault
+    path: "Modules/my-crm"
+    permissions:
+      read: ["Brain/people/**", "Daily/entries/**"]
+      write: ["Modules/my-crm/**"]
+      bash: false
+      mcp: ["brain-search"]</code></pre>
+                </div>
+            </section>
+
+            <!-- Module System -->
+            <section class="docs-section" id="modules">
+                <h2>Module System</h2>
+                <p>Every module has a <code>module.py</code> at its root that defines its interface.</p>
+
+                <div class="code-block">
+                    <div class="code-header">module.py - Module Definition</div>
+                    <pre><code>from parachute.core import Module, route, mcp_tool, event
+
+class DailyModule(Module):
+    """Daily journaling and reflection module."""
+
+    name = "daily"
+    version = "1.0.0"
+    description = "Voice-first journaling with agent reflections"
+
+    # Declare required permissions
+    permissions = {
+        "read": ["Daily/**", "parachute/memory.md"],
+        "write": ["Daily/**"],
+        "bash": False,
+        "mcp": ["daily-journal", "daily-search"],
+    }
+
+    # Declare dependencies on other modules
+    dependencies = ["brain"]
+
+    # HTTP Routes (exposed at /api/daily/*)
+    @route("GET", "/entries")
+    async def list_entries(self, date: str = None, limit: int = 50):
+        """List journal entries."""
+        ...
+
+    @route("POST", "/query")
+    async def query_streaming(self, message: str, session_id: str = None):
+        """Stream a conversation about journal entries."""
+        async for event in self.core.query(
+            message=message,
+            session_id=session_id,
+            mcp_servers=self.get_mcp_servers(),
+        ):
+            yield event
+
+    # MCP Tools (exposed to Claude agent)
+    @mcp_tool("daily-journal")
+    async def search_journals(self, query: str, date_from: str = None):
+        """Search journal entries by content."""
+        ...
+
+    # Event handlers
+    @event("daily.entry.created")
+    async def on_entry_created(self, entry_id: str, content: str):
+        """Handle new journal entry - trigger reflection pipeline."""
+        await self.trigger_reflection_agent(entry_id)</code></pre>
+                </div>
+
+                <h3>Module Discovery Flow</h3>
+                <ol>
+                    <li>Server starts and loads <code>~/.parachute/modules.yaml</code></li>
+                    <li>For each enabled module:
+                        <ul>
+                            <li>If <code>source: builtin</code> → Load from <code>parachute/modules/{name}/</code></li>
+                            <li>If <code>source: vault</code> → Load from <code>{vault}/{path}/module.py</code></li>
+                        </ul>
+                    </li>
+                    <li>Validate module class against interface</li>
+                    <li>Check permissions against policy</li>
+                    <li>Register routes at <code>/api/{name}/*</code></li>
+                    <li>Start MCP servers if declared</li>
+                    <li>Call <code>on_enable()</code> lifecycle hook</li>
+                </ol>
+            </section>
+
+            <!-- Core Modules -->
+            <section class="docs-section" id="core-modules">
+                <h2>Core Modules</h2>
+                <p>Three built-in modules ship with Parachute Computer.</p>
+
+                <div class="module-card">
+                    <h4>
+                        <span class="module-icon">📔</span>
+                        Daily Module
+                        <span class="module-type">Built-in</span>
+                    </h4>
+                    <p>Voice-first journaling with AI-powered reflections. The foundation of Parachute's "extended mind" experience.</p>
+                    <p><strong>Data Location:</strong> <code>~/Parachute/Daily/</code></p>
+                    <div class="module-features">
+                        <span>Voice transcription</span>
+                        <span>Entry management</span>
+                        <span>Reflection agents</span>
+                        <span>Journal search</span>
+                        <span>Curator pipeline</span>
+                    </div>
+                    <p style="margin-top: 1rem; font-size: 0.9rem;"><strong>MCP Tools:</strong> <code>daily-search</code>, <code>daily-today</code>, <code>daily-create</code></p>
+                    <p style="font-size: 0.9rem;"><strong>Events:</strong> <code>daily.entry.created</code>, <code>daily.reflection.completed</code></p>
+                </div>
+
+                <div class="module-card">
+                    <h4>
+                        <span class="module-icon">💬</span>
+                        Chat Module
+                        <span class="module-type">Built-in</span>
+                    </h4>
+                    <p>Conversational AI interface with agentic capabilities. Session management, context folders, and custom agents.</p>
+                    <p><strong>Data Location:</strong> <code>~/Parachute/Chat/</code></p>
+                    <div class="module-features">
+                        <span>Streaming chat</span>
+                        <span>Session persistence</span>
+                        <span>Context folders</span>
+                        <span>Agent selection</span>
+                        <span>Tool permissions</span>
+                        <span>Curator companion</span>
+                    </div>
+                    <p style="margin-top: 1rem; font-size: 0.9rem;"><strong>MCP Tools:</strong> <code>chat-sessions</code>, <code>chat-context</code></p>
+                    <p style="font-size: 0.9rem;"><strong>Events:</strong> <code>chat.session.created</code>, <code>chat.session.message</code></p>
+                </div>
+
+                <div class="module-card">
+                    <h4>
+                        <span class="module-icon">🧠</span>
+                        Brain Module
+                        <span class="module-type">Built-in (New)</span>
+                    </h4>
+                    <p>Structured knowledge graph for entities and relationships. Think Obsidian's knowledge graph + CRM capabilities.</p>
+                    <p><strong>Data Location:</strong> <code>~/Parachute/Brain/</code></p>
+                    <div class="module-features">
+                        <span>Entity management</span>
+                        <span>Para-ID linking</span>
+                        <span>Alias resolution</span>
+                        <span>Relationship graph</span>
+                        <span>Semantic search</span>
+                        <span>Mention detection</span>
+                    </div>
+                    <p style="margin-top: 1rem; font-size: 0.9rem;"><strong>MCP Tools:</strong> <code>brain-search</code>, <code>brain-resolve</code>, <code>brain-link</code>, <code>brain-suggest</code></p>
+                    <p style="font-size: 0.9rem;"><strong>Events:</strong> <code>brain.entity.created</code>, <code>brain.mention.detected</code></p>
+                </div>
+
+                <h3>Brain Module: Entity Structure</h3>
+                <p>Entities are markdown files with YAML frontmatter. The para_id system enables stable references across name changes.</p>
+                <div class="code-block">
+                    <div class="code-header">Brain/entities/people/kevin-regen-hub.md</div>
+                    <pre><code>---
+para_id: person-abc123
+type: person
+aliases:
+  - Kevin
+  - Kevin S
+  - Kev
+tags:
+  - collaborator
+  - regen-hub
+created: 2026-01-15
+updated: 2026-01-29
+---
+
+# Kevin (Regen Hub)
+
+Co-founder of Regen Hub. Working together on Learn Vibe Build.
+
+## Relationships
+- [[learn-vibe-build]] - Co-instructor
+- [[woven-web]] - Advisor
+
+## Notes
+- Met at ETHDenver 2024
+- Based in Boulder</code></pre>
+                </div>
+
+                <h3>Daily → Brain Integration</h3>
+                <p>When Daily creates an entry, it calls Brain to detect and link mentions:</p>
+                <div class="architecture-visual">
+                    <pre>
+Journal Entry: "Met with Kevin about the LVB curriculum"
+                    │
+                    ▼
+        Daily Module detects mention
+                    │
+                    ▼
+        POST /api/brain/resolve {"text": "Kevin"}
+                    │
+                    ▼
+        Brain returns: {"para_id": "person-abc123", "name": "Kevin (Regen Hub)"}
+                    │
+                    ▼
+        Entry stored with structured reference in metadata</pre>
+                </div>
+            </section>
+
+            <!-- Flutter Architecture -->
+            <section class="docs-section" id="flutter">
+                <h2>Flutter App Architecture</h2>
+                <p>The current monolith becomes multiple packages sharing a core.</p>
+
+                <div class="comparison-table">
+                    <div class="comparison-side">
+                        <h4>Current (Monolith)</h4>
+                        <pre>app/
+  lib/
+    features/
+      chat/
+      daily/
+      vault/
+      settings/
+    core/
+      services/
+      providers/</pre>
+                    </div>
+                    <div class="comparison-side">
+                        <h4>Future (Modular)</h4>
+                        <pre>app/
+  packages/
+    parachute_core/      ← Shared
+    parachute_daily/     ← Daily-specific
+    parachute_chat/      ← Chat-specific
+    parachute_computer/  ← Management UI
+  apps/
+    daily/               ← Standalone app
+    chat/                ← Standalone app
+    computer/            ← Full app</pre>
+                    </div>
+                </div>
+
+                <h3>Package Contents</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Package</th>
+                            <th>Contents</th>
+                            <th>Optional?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>parachute_core</code></td>
+                            <td>Server connection, auth, theming, common widgets, sync</td>
+                            <td>Required by all</td>
+                        </tr>
+                        <tr>
+                            <td><code>parachute_daily</code></td>
+                            <td>Journal UI, voice input, entry management</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td><code>parachute_chat</code></td>
+                            <td>Chat UI, session management, message bubbles</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td><code>parachute_computer</code></td>
+                            <td>Module management, permissions, settings</td>
+                            <td>-</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>App Configurations</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>App</th>
+                            <th>Packages</th>
+                            <th>Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Parachute Daily</strong></td>
+                            <td>core + daily</td>
+                            <td>Standalone journaling app (what ships first)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Parachute Chat</strong></td>
+                            <td>core + chat</td>
+                            <td>Standalone chat app</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Parachute Computer</strong></td>
+                            <td>core + daily + chat + computer</td>
+                            <td>Full experience with module management</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Sandboxing -->
+            <section class="docs-section" id="sandboxing">
+                <h2>Sandboxing &amp; Permissions</h2>
+                <p>Security through containerization and permission enforcement.</p>
+
+                <h3>Container Architecture</h3>
+                <div class="architecture-visual">
+                    <pre>
+┌─────────────────────────────────────────────────────────────────┐
+│                        Host Machine                              │
+│                                                                  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │              Orchestrator Container                        │  │
+│  │  • FastAPI server (port 3333)                             │  │
+│  │  • Built-in modules (daily, chat, brain)                  │  │
+│  │  • Permission enforcement                                 │  │
+│  │                                                           │  │
+│  │  Volumes:                                                 │  │
+│  │    /vault     ← ~/Parachute (read-write)                  │  │
+│  │    /app       ← Server code (read-only)                   │  │
+│  │                                                           │  │
+│  │  Environment:                                             │  │
+│  │    HOME=/vault (for SDK session storage)                  │  │
+│  │    ANTHROPIC_API_KEY=...                                  │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                              │                                   │
+│                    Internal Docker Network                       │
+│                              │                                   │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │            User Module Container (per untrusted module)   │  │
+│  │  • Isolated Python environment                            │  │
+│  │  • Limited filesystem access (per permissions)            │  │
+│  │  • No direct network access                               │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘</pre>
+                </div>
+
+                <h3>Trust Levels</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Level</th>
+                            <th>Description</th>
+                            <th>Sandboxing</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>System</strong></td>
+                            <td>Built-in modules (daily, chat, brain)</td>
+                            <td>Runs in orchestrator, full vault access</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Trusted</strong></td>
+                            <td>User-created modules explicitly promoted</td>
+                            <td>Runs in orchestrator, declared permissions</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Untrusted</strong></td>
+                            <td>Third-party or new modules</td>
+                            <td>Separate container, minimal access</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Permission Declaration</h3>
+                <div class="code-block">
+                    <div class="code-header">Module Permission Example</div>
+                    <pre><code>permissions = {
+    # Filesystem access
+    "read": [
+        "Brain/entities/**",     # Read all brain entities
+        "Daily/entries/*.md",    # Read daily entries (not audio)
+    ],
+    "write": [
+        "Modules/my-module/**",  # Write to own folder only
+    ],
+
+    # Command execution
+    "bash": False,               # No shell access
+    # OR: ["ls", "grep", "find"] # Specific commands only
+
+    # Network access
+    "network": False,            # No outbound network
+    # OR: ["api.example.com"]    # Specific hosts only
+
+    # MCP tool access
+    "mcp": [
+        "brain-search",          # Can search brain
+        "brain-resolve",         # Can resolve mentions
+    ],
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- Inter-Module Communication -->
+            <section class="docs-section" id="communication">
+                <h2>Inter-Module Communication</h2>
+                <p>Three patterns for modules to talk to each other.</p>
+
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Pattern</th>
+                            <th>Use Case</th>
+                            <th>Example</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Internal HTTP</strong></td>
+                            <td>Synchronous data lookup</td>
+                            <td>Daily calls <code>POST /api/brain/resolve</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>MCP Tools</strong></td>
+                            <td>Agent using another module's capability</td>
+                            <td>Chat agent calls <code>brain-search</code> tool</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Event Bus</strong></td>
+                            <td>Reacting to changes (decoupled)</td>
+                            <td>Brain listens for <code>daily.entry.created</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="callout callout-info">
+                    <strong>Low Latency:</strong> All communication stays on the same machine. Internal HTTP and events have negligible overhead.
+                </div>
+            </section>
+
+            <!-- Migration Plan -->
+            <section class="docs-section" id="migration">
+                <h2>Migration Plan</h2>
+                <p>Phased approach to restructuring without breaking current functionality.</p>
+
+                <div class="phase-card">
+                    <h4>
+                        <span class="phase-number">1</span>
+                        Foundation
+                        <span class="phase-weeks">Weeks 1-2</span>
+                    </h4>
+                    <p>Extract core without breaking current functionality.</p>
+                    <ul>
+                        <li>Create <code>parachute.core</code> Python package (SDK wrapper, permissions, database)</li>
+                        <li>Define Module base class and decorators</li>
+                        <li>Refactor current code as modules (keep same structure)</li>
+                        <li>Add <code>modules.yaml</code> configuration</li>
+                    </ul>
+                </div>
+
+                <div class="phase-card">
+                    <h4>
+                        <span class="phase-number">2</span>
+                        Separation
+                        <span class="phase-weeks">Weeks 3-4</span>
+                    </h4>
+                    <p>Modules become truly independent.</p>
+                    <ul>
+                        <li>Separate module routes (<code>/api/daily/*</code>, <code>/api/chat/*</code>)</li>
+                        <li>Implement event bus for cross-module communication</li>
+                        <li>Create Brain module (entity CRUD, search, linking)</li>
+                        <li>Connect Daily → Brain for mention detection</li>
+                    </ul>
+                </div>
+
+                <div class="phase-card">
+                    <h4>
+                        <span class="phase-number">3</span>
+                        Flutter Restructure
+                        <span class="phase-weeks">Weeks 5-6</span>
+                    </h4>
+                    <p>Separate apps sharing core package.</p>
+                    <ul>
+                        <li>Create <code>parachute_core</code> Flutter package</li>
+                        <li>Create <code>parachute_daily</code> and <code>parachute_chat</code> packages</li>
+                        <li>Build standalone Daily app and verify module communication</li>
+                    </ul>
+                </div>
+
+                <div class="phase-card">
+                    <h4>
+                        <span class="phase-number">4</span>
+                        Sandboxing
+                        <span class="phase-weeks">Weeks 7-8</span>
+                    </h4>
+                    <p>Security and isolation.</p>
+                    <ul>
+                        <li>Dockerize base server (volumes, HOME override)</li>
+                        <li>Implement user module containers with permission-based mounts</li>
+                        <li>Build Computer management UI (module listing, permissions)</li>
+                    </ul>
+                </div>
+
+                <div class="phase-card">
+                    <h4>
+                        <span class="phase-number">5</span>
+                        Polish &amp; Launch
+                        <span class="phase-weeks">Weeks 9-10</span>
+                    </h4>
+                    <p>Production ready.</p>
+                    <ul>
+                        <li>End-to-end testing across all modules</li>
+                        <li>Documentation (module development guide, API reference)</li>
+                        <li>Release: Parachute Daily standalone, Parachute Computer full package</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Open Questions -->
+            <section class="docs-section" id="questions">
+                <h2>Open Questions</h2>
+                <p>Decisions needed before/during implementation.</p>
+
+                <h3>Architecture</h3>
+                <ol class="question-list">
+                    <li><strong>Module hot-reload:</strong> Can modules be updated without server restart?</li>
+                    <li><strong>Module versioning:</strong> How do we handle breaking changes in module interfaces?</li>
+                    <li><strong>Shared state:</strong> Should modules share a database, or each have their own?</li>
+                    <li><strong>Agent context:</strong> How do we manage system prompts across modules?</li>
+                </ol>
+
+                <h3>Brain Module</h3>
+                <ol class="question-list" start="5">
+                    <li><strong>Entity types:</strong> Is PARA (Projects, Areas, Resources, Archive) + People sufficient?</li>
+                    <li><strong>Relationship types:</strong> Should relationships be typed (collaborator, advisor) or freeform?</li>
+                    <li><strong>External sync:</strong> How to import from Obsidian, Notion, etc.?</li>
+                </ol>
+
+                <h3>Sandboxing</h3>
+                <ol class="question-list" start="8">
+                    <li><strong>Container overhead:</strong> Is per-module Docker too heavy? Consider gVisor, Firecracker?</li>
+                    <li><strong>Claude API access:</strong> Should user modules have direct Claude access or go through core?</li>
+                    <li><strong>Network policies:</strong> How granular should outbound network restrictions be?</li>
+                </ol>
+
+                <h3>Flutter</h3>
+                <ol class="question-list" start="11">
+                    <li><strong>Package distribution:</strong> How do we distribute <code>parachute_core</code> to third-party developers?</li>
+                    <li><strong>Feature flags:</strong> How do optional features (transcription) get included/excluded?</li>
+                    <li><strong>Theme customization:</strong> Per-module theming, or unified across all apps?</li>
+                </ol>
+            </section>
+
+            <!-- Navigation -->
+            <div class="nav-cards">
+                <a href="index.html" class="nav-card">
+                    <h3>Current Architecture</h3>
+                    <p>Understand the existing system before the restructure.</p>
+                </a>
+                <a href="file-manifest.html" class="nav-card">
+                    <h3>File Manifest</h3>
+                    <p>Complete listing of all 256 source files to be reorganized.</p>
+                </a>
+            </div>
+        </main>
+    </div>
+    <footer>
+        <p>&copy; 2026 Open Parachute, PBC. A Colorado Public Benefit Corporation.</p>
+        <p>PRD last updated: January 29, 2026</p>
+    </footer>
+</body>
+</html>
