@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Routes | Parachute Documentation</title>
+    <meta name="description" content="Complete API reference for the Parachute base server">
+    <link rel="stylesheet" href="../style.css">
+    <link rel="stylesheet" href="docs.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="../index.html" class="logo">Open Parachute</a>
+            <div class="nav-links">
+                <a href="index.html" class="active">Docs</a>
+                <a href="../roadmap.html">Roadmap</a>
+                <a href="https://github.com/OpenParachutePBC" target="_blank">GitHub</a>
+            </div>
+        </nav>
+    </header>
+
+    <div class="docs-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="docs-sidebar">
+            <div class="sidebar-section">
+                <h3>Overview</h3>
+                <a href="index.html">Architecture</a>
+                <a href="data-flow.html">Data Flow</a>
+                <a href="integration.html">Integration</a>
+            </div>
+            <div class="sidebar-section">
+                <h3>App (Flutter)</h3>
+                <a href="app-overview.html">Overview</a>
+                <a href="app-chat.html">Chat Feature</a>
+                <a href="app-daily.html">Daily Feature</a>
+                <a href="app-vault.html">Vault Feature</a>
+                <a href="app-services.html">Services</a>
+            </div>
+            <div class="sidebar-section">
+                <h3>Base (Python)</h3>
+                <a href="base-overview.html">Overview</a>
+                <a href="base-api.html" class="active">API Routes</a>
+                <a href="base-orchestrator.html">Orchestrator</a>
+                <a href="base-agents.html">Agents</a>
+                <a href="base-database.html">Database</a>
+            </div>
+            <div class="sidebar-section">
+                <h3>Reference</h3>
+                <a href="issues.html">Issues & TODOs</a>
+                <a href="file-manifest.html">File Manifest</a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="docs-content">
+            <div class="breadcrumb">
+                <a href="../index.html">Home</a> / <a href="index.html">Docs</a> / <span>API Routes</span>
+            </div>
+
+            <h1>API Routes</h1>
+            <p class="lead">Complete reference for the 18 endpoints exposed by the Parachute base server. All routes are under <code>/api/</code>.</p>
+
+            <!-- Chat Endpoints -->
+            <section class="docs-section">
+                <h2>Chat Endpoints</h2>
+                <p>Core chat functionality with streaming responses.</p>
+
+                <div class="endpoint-list">
+                    <div class="endpoint">
+                        <span class="endpoint-method post">POST</span>
+                        <span class="endpoint-path">/api/chat</span>
+                        <span class="endpoint-desc">Run agent with streaming response</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method post">POST</span>
+                        <span class="endpoint-path">/api/chat/{session_id}/abort</span>
+                        <span class="endpoint-desc">Abort active stream</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method get">GET</span>
+                        <span class="endpoint-path">/api/chat/{session_id}/stream-status</span>
+                        <span class="endpoint-desc">Check if stream is active</span>
+                    </div>
+                </div>
+
+                <h3>POST /api/chat</h3>
+                <p>The main chat endpoint. Sends a message and returns a streaming SSE response.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Request Body</div>
+                    <pre><code>{
+  "message": "Help me understand this code",
+  "session_id": null,           // null for new, string for resume
+  "agent": "vault-agent",       // optional, defaults to vault-agent
+  "attachments": [              // optional
+    {
+      "name": "screenshot.png",
+      "mimeType": "image/png",
+      "base64Data": "iVBORw0KGgo..."
+    }
+  ],
+  "context_files": ["/src/main.py"],     // optional
+  "context_folders": ["/src"],            // optional
+  "working_directory": "/path/to/project" // optional
+}</code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Response (SSE Stream)</div>
+                    <pre><code>data: {"type": "session", "id": "sess_abc", "title": "New Chat"}
+data: {"type": "text", "content": "I'll help you..."}
+data: {"type": "tool_use_start", "id": "t1", "name": "Read", "input": {...}}
+data: {"type": "tool_result", "tool_use_id": "t1", "result": "..."}
+data: {"type": "message_stop"}</code></pre>
+                </div>
+            </section>
+
+            <!-- Session Endpoints -->
+            <section class="docs-section">
+                <h2>Session Endpoints</h2>
+                <p>Manage chat sessions (CRUD operations).</p>
+
+                <div class="endpoint-list">
+                    <div class="endpoint">
+                        <span class="endpoint-method get">GET</span>
+                        <span class="endpoint-path">/api/chat</span>
+                        <span class="endpoint-desc">List all sessions</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method get">GET</span>
+                        <span class="endpoint-path">/api/chat/{session_id}</span>
+                        <span class="endpoint-desc">Get session details</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method delete">DELETE</span>
+                        <span class="endpoint-path">/api/chat/{session_id}</span>
+                        <span class="endpoint-desc">Delete session</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method post">POST</span>
+                        <span class="endpoint-path">/api/chat/{session_id}/archive</span>
+                        <span class="endpoint-desc">Archive session</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method post">POST</span>
+                        <span class="endpoint-path">/api/chat/{session_id}/unarchive</span>
+                        <span class="endpoint-desc">Unarchive session</span>
+                    </div>
+                </div>
+
+                <h3>GET /api/chat</h3>
+                <p>List all sessions with optional filtering.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Query Parameters</div>
+                    <pre><code>?archived=false    // Filter by archived status
+?tag=project       // Filter by tag
+?limit=50          // Pagination limit
+?offset=0          // Pagination offset</code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Response</div>
+                    <pre><code>{
+  "sessions": [
+    {
+      "id": "sess_abc123",
+      "title": "Code Review Help",
+      "created_at": "2026-01-28T10:30:00Z",
+      "last_accessed": "2026-01-28T11:45:00Z",
+      "message_count": 12,
+      "archived": false,
+      "tags": ["project", "code-review"],
+      "source": "parachute"
+    }
+  ],
+  "total": 150,
+  "has_more": true
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- Auth Endpoints -->
+            <section class="docs-section">
+                <h2>Authentication Endpoints</h2>
+                <p>API key management for multi-device access.</p>
+
+                <div class="endpoint-list">
+                    <div class="endpoint">
+                        <span class="endpoint-method post">POST</span>
+                        <span class="endpoint-path">/api/auth/keys</span>
+                        <span class="endpoint-desc">Create new API key</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method get">GET</span>
+                        <span class="endpoint-path">/api/auth/keys</span>
+                        <span class="endpoint-desc">List API keys (hashed)</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method delete">DELETE</span>
+                        <span class="endpoint-path">/api/auth/keys/{key_id}</span>
+                        <span class="endpoint-desc">Revoke API key</span>
+                    </div>
+                </div>
+
+                <h3>POST /api/auth/keys</h3>
+                <p>Create a new API key. The full key is only returned once.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Request</div>
+                    <pre><code>{
+  "label": "iPhone 15 Pro"
+}</code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Response</div>
+                    <pre><code>{
+  "id": "k_aBcDeFgHiJkL",
+  "label": "iPhone 15 Pro",
+  "key": "para_aBcDeFgHiJkLmNoPqRsT1234",  // Only shown once!
+  "created_at": "2026-01-28T10:30:00Z"
+}</code></pre>
+                </div>
+
+                <div class="callout callout-warning">
+                    <strong>Important:</strong> The full API key (<code>para_...</code>) is only returned on creation. Store it securely - it cannot be retrieved later.
+                </div>
+            </section>
+
+            <!-- Module Endpoints -->
+            <section class="docs-section">
+                <h2>Module Endpoints</h2>
+                <p>Manage system prompts for different modules (Chat, Daily, etc.).</p>
+
+                <div class="endpoint-list">
+                    <div class="endpoint">
+                        <span class="endpoint-method get">GET</span>
+                        <span class="endpoint-path">/api/modules/{module}/prompt</span>
+                        <span class="endpoint-desc">Get module system prompt</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method put">PUT</span>
+                        <span class="endpoint-path">/api/modules/{module}/prompt</span>
+                        <span class="endpoint-desc">Update module system prompt</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method get">GET</span>
+                        <span class="endpoint-path">/api/modules/{module}/search</span>
+                        <span class="endpoint-desc">Search within module</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Curator Endpoints -->
+            <section class="docs-section">
+                <h2>Curator Endpoints</h2>
+                <p>Introspect background curator agents.</p>
+
+                <div class="endpoint-list">
+                    <div class="endpoint">
+                        <span class="endpoint-method get">GET</span>
+                        <span class="endpoint-path">/api/curator/{session_id}</span>
+                        <span class="endpoint-desc">Get curator status for session</span>
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Response</div>
+                    <pre><code>{
+  "session_id": "sess_abc123",
+  "curator_session_id": "cur_xyz789",
+  "last_run": "2026-01-28T11:30:00Z",
+  "task_count": 5,
+  "pending_tasks": 0,
+  "last_title_update": "2026-01-28T11:30:00Z"
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- Scheduler Endpoints -->
+            <section class="docs-section">
+                <h2>Scheduler Endpoints</h2>
+                <p>Manage scheduled daily agents.</p>
+
+                <div class="endpoint-list">
+                    <div class="endpoint">
+                        <span class="endpoint-method get">GET</span>
+                        <span class="endpoint-path">/api/scheduler/agents</span>
+                        <span class="endpoint-desc">List scheduled agents</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method post">POST</span>
+                        <span class="endpoint-path">/api/scheduler/agents/{name}/run</span>
+                        <span class="endpoint-desc">Trigger agent manually</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Import Endpoint -->
+            <section class="docs-section">
+                <h2>Import Endpoint</h2>
+                <p>Import conversations from Claude or ChatGPT exports.</p>
+
+                <div class="endpoint-list">
+                    <div class="endpoint">
+                        <span class="endpoint-method post">POST</span>
+                        <span class="endpoint-path">/api/import</span>
+                        <span class="endpoint-desc">Import conversation export</span>
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">Request</div>
+                    <pre><code>{
+  "data": {...},              // JSON export from Claude/ChatGPT
+  "source": "claude",         // "claude" | "chatgpt" | "auto"
+  "enable_continuation": true // Allow continuing conversation
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- Health Endpoint -->
+            <section class="docs-section">
+                <h2>Health & Debug Endpoints</h2>
+
+                <div class="endpoint-list">
+                    <div class="endpoint">
+                        <span class="endpoint-method get">GET</span>
+                        <span class="endpoint-path">/api/health</span>
+                        <span class="endpoint-desc">Server health check</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method get">GET</span>
+                        <span class="endpoint-path">/api/debug/auth</span>
+                        <span class="endpoint-desc">Debug auth configuration</span>
+                    </div>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">GET /api/health Response</div>
+                    <pre><code>{
+  "status": "ok",
+  "version": "0.1.0",
+  "commit": "abc1234",
+  "vault_path": "/Users/you/Parachute"
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- Filesystem Endpoints -->
+            <section class="docs-section">
+                <h2>Filesystem Endpoints</h2>
+                <p>File operations for vault management.</p>
+
+                <div class="endpoint-list">
+                    <div class="endpoint">
+                        <span class="endpoint-method get">GET</span>
+                        <span class="endpoint-path">/api/fs/list</span>
+                        <span class="endpoint-desc">List directory contents</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method get">GET</span>
+                        <span class="endpoint-path">/api/fs/read</span>
+                        <span class="endpoint-desc">Read file contents</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method post">POST</span>
+                        <span class="endpoint-path">/api/fs/write</span>
+                        <span class="endpoint-desc">Write file</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method delete">DELETE</span>
+                        <span class="endpoint-path">/api/fs/delete</span>
+                        <span class="endpoint-desc">Delete file</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Authentication -->
+            <section class="docs-section">
+                <h2>Authentication</h2>
+                <p>API requests can be authenticated via:</p>
+
+                <div class="code-block">
+                    <div class="code-header">Header Options</div>
+                    <pre><code># Option 1: X-API-Key header
+X-API-Key: para_aBcDeFgHiJkLmNoPqRsT1234
+
+# Option 2: Authorization header
+Authorization: Bearer para_aBcDeFgHiJkLmNoPqRsT1234</code></pre>
+                </div>
+
+                <h3>Auth Modes</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Mode</th>
+                            <th>Localhost</th>
+                            <th>Remote</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>disabled</code></td>
+                            <td>No auth required</td>
+                            <td>No auth required</td>
+                        </tr>
+                        <tr>
+                            <td><code>remote</code> (default)</td>
+                            <td>Bypassed</td>
+                            <td>Key required</td>
+                        </tr>
+                        <tr>
+                            <td><code>always</code></td>
+                            <td>Key required</td>
+                            <td>Key required</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Error Responses -->
+            <section class="docs-section">
+                <h2>Error Responses</h2>
+
+                <div class="code-block">
+                    <div class="code-header">401 Unauthorized</div>
+                    <pre><code>{
+  "error": "Unauthorized",
+  "message": "Valid API key required"
+}</code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">404 Not Found</div>
+                    <pre><code>{
+  "error": "Not Found",
+  "message": "Session not found: sess_abc123"
+}</code></pre>
+                </div>
+
+                <div class="code-block">
+                    <div class="code-header">422 Validation Error</div>
+                    <pre><code>{
+  "detail": [
+    {
+      "loc": ["body", "message"],
+      "msg": "field required",
+      "type": "value_error.missing"
+    }
+  ]
+}</code></pre>
+                </div>
+            </section>
+
+            <!-- Navigation -->
+            <section class="docs-section">
+                <h2>Next Steps</h2>
+                <div class="nav-cards">
+                    <a href="base-orchestrator.html" class="nav-card">
+                        <h3>🎭 Orchestrator</h3>
+                        <p>How the orchestrator processes requests and manages sessions.</p>
+                    </a>
+                    <a href="data-flow.html" class="nav-card">
+                        <h3>🔄 Data Flow</h3>
+                        <p>Follow a request from app to AI and back.</p>
+                    </a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Open Parachute, PBC. A Colorado Public Benefit Corporation.</p>
+        <p>Documentation last updated: January 28, 2026</p>
+    </footer>
+</body>
+</html>
