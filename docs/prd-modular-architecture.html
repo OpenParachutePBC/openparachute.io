@@ -288,8 +288,9 @@
                     <li><a href="#vision">Vision &amp; Principles</a></li>
                     <li><a href="#architecture">Architecture Overview</a></li>
                     <li><a href="#core">Parachute Computer Core</a></li>
+                    <li><a href="#brain">Brain: The Connective Layer</a></li>
                     <li><a href="#modules">Module System</a></li>
-                    <li><a href="#core-modules">Core Modules (Daily, Chat, Brain)</a></li>
+                    <li><a href="#core-modules">Core Modules (Daily, Chat)</a></li>
                     <li><a href="#flutter">Flutter App Architecture</a></li>
                     <li><a href="#sandboxing">Sandboxing &amp; Permissions</a></li>
                     <li><a href="#communication">Inter-Module Communication</a></li>
@@ -305,8 +306,9 @@
                 <p>Parachute is evolving from a monolithic application into a <strong>modular personal computer platform</strong>. This PRD defines the architecture for:</p>
                 <ul>
                     <li><strong>Parachute Computer</strong> - The foundational platform (Python server + management UI)</li>
-                    <li><strong>Module System</strong> - Discoverable, sandboxed modules that extend functionality</li>
-                    <li><strong>Core Modules</strong> - Daily, Chat, and Brain as the first three modules</li>
+                    <li><strong>Brain</strong> - Integrated connective layer for knowledge, context, and memory</li>
+                    <li><strong>Module System</strong> - Discoverable modules that extend functionality (all modules are vault modules)</li>
+                    <li><strong>Core Modules</strong> - Daily and Chat as the first installable modules</li>
                     <li><strong>Flutter App Architecture</strong> - Shared <code>parachute_core</code> package with separate apps</li>
                 </ul>
                 <div class="callout callout-info">
@@ -377,31 +379,36 @@
 │                                                                              │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │                         Core Router (FastAPI)                          │ │
+│  │  /api/brain/*    → Brain (integrated)                                  │ │
 │  │  /api/modules/*  → Module Management                                   │ │
 │  │  /api/daily/*    → Daily Module                                        │ │
 │  │  /api/chat/*     → Chat Module                                         │ │
-│  │  /api/brain/*    → Brain Module                                        │ │
 │  │  /api/{custom}/* → User-defined Modules                                │ │
 │  └────────────────────────────────────────────────────────────────────────┘ │
 │                                                                              │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │                    parachute.core (Python package)                     │ │
 │  │  • Claude SDK wrapper      • Module discovery & lifecycle              │ │
-│  │  • Permissions/Sandboxing  • Database layer (SQLite)                   │ │
+│  │  • Brain (knowledge layer) • Database layer (SQLite)                   │ │
 │  │  • File access (gated)     • MCP infrastructure                        │ │
 │  │  • Hooks system            • Event bus                                 │ │
 │  └────────────────────────────────────────────────────────────────────────┘ │
 │                                                                              │
 │  ┌──────────────────────────────────────────────────────────────────────┐   │
-│  │                         Module Containers                             │   │
+│  │                     Modules (all vault modules)                       │   │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌────────────┐  │   │
-│  │  │ Daily       │  │ Chat        │  │ Brain       │  │ User       │  │   │
-│  │  │ Module      │  │ Module      │  │ Module      │  │ Modules    │  │   │
-│  │  │ (built-in)  │  │ (built-in)  │  │ (built-in)  │  │ (from vault)│  │   │
+│  │  │ Daily       │  │ Chat        │  │ Telegram    │  │ Custom     │  │   │
+│  │  │ (Parachute) │  │ (Parachute) │  │ Bot         │  │ Modules    │  │   │
+│  │  │ verified    │  │ verified    │  │ user        │  │            │  │   │
 │  │  └─────────────┘  └─────────────┘  └─────────────┘  └────────────┘  │   │
 │  └──────────────────────────────────────────────────────────────────────┘   │
-│                          │ Docker sandbox boundary │                         │
-└──────────────────────────┴─────────────────────────┴────────────────────────┘
+│         │ Trusted modules in main container │                                │
+│                                                                              │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │              Agent Sandboxes (Docker per untrusted agent)             │   │
+│  │  Claude SDK runs with scoped permissions per agent definition         │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
                                       │
                             ~/Parachute (vault)</pre>
                 </div>
@@ -492,42 +499,240 @@
                 <p>Module registry at <code>~/.parachute/modules.yaml</code>:</p>
                 <div class="code-block">
                     <div class="code-header">modules.yaml</div>
-                    <pre><code>modules:
+                    <pre><code># All modules are vault modules - no "built-in" distinction
+# Fresh vault starts empty, user installs what they want
+modules:
   daily:
     enabled: true
-    source: builtin
+    source: parachute://daily    # Official Parachute module
     version: "1.0.0"
+    trust: verified              # Signed by Parachute
+    hash: "sha256:abc123..."     # Verified on load
 
   chat:
     enabled: true
-    source: builtin
+    source: parachute://chat
     version: "1.0.0"
+    trust: verified
+    hash: "sha256:def456..."
 
-  brain:
+  telegram-bot:
     enabled: true
-    source: builtin
-    version: "1.0.0"
+    source: local                # User-created in vault
+    path: "Modules/telegram-bot"
+    trust: trusted               # User explicitly trusts
+    hash: "sha256:789abc..."     # Re-approve if changes
+    agents:                      # Agent-level sandboxing
+      responder:
+        paths: ["Brain/projects/client-x.md", "Work/client-x/"]
+        capabilities: [read]
+      admin:
+        paths: ["Brain/**"]
+        capabilities: [read, write]
 
-  my-crm:
+  experimental-module:
     enabled: true
-    source: vault
-    path: "Modules/my-crm"
-    permissions:
-      read: ["Brain/people/**", "Daily/entries/**"]
-      write: ["Modules/my-crm/**"]
-      bash: false
-      mcp: ["brain-search"]</code></pre>
+    source: github://someuser/cool-module
+    version: "0.1.0"
+    trust: untrusted             # Runs in separate container
+    hash: "sha256:xyz789..."</code></pre>
                 </div>
+            </section>
+
+            <!-- Brain: The Connective Layer -->
+            <section class="docs-section" id="brain">
+                <h2>Brain: The Connective Layer</h2>
+                <p>Brain isn't just another module—it's <strong>integrated into the core</strong> as the connective tissue between all modules. It provides the shared context layer that enables intelligent cross-module communication.</p>
+
+                <div class="callout callout-info">
+                    <strong>Key Insight:</strong> Brain connects Daily and Chat (and future modules) through shared knowledge, context, and memory. It's not optional infrastructure—it's foundational.
+                </div>
+
+                <h3>Brain as Core Infrastructure</h3>
+                <div class="architecture-visual">
+                    <pre>
+                    ┌─────────────────────────────────────┐
+                    │           Daily Module              │
+                    │  • Creates journal entries          │
+                    │  • Detects entity mentions          │
+                    └──────────────┬──────────────────────┘
+                                   │
+                                   ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                          BRAIN (Core)                                 │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
+│  │   Entity    │  │   Para-ID   │  │  Relation   │  │  Context    │ │
+│  │   Store     │  │   System    │  │   Graph     │  │  Provider   │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │
+│                                                                       │
+│  ~/Parachute/Brain/                                                  │
+│    types.yaml          # Dynamic entity type definitions             │
+│    entities/           # Markdown files per entity                   │
+│      people/           # Person entities                             │
+│      projects/         # Project entities (can point to folders)     │
+│      topics/           # Topic entities                              │
+└──────────────────────────────────────────────────────────────────────┘
+                                   │
+                                   ▼
+                    ┌─────────────────────────────────────┐
+                    │           Chat Module               │
+                    │  • Loads context from Brain         │
+                    │  • Updates Brain after sessions     │
+                    └─────────────────────────────────────┘</pre>
+                </div>
+
+                <h3>The Daily → Brain → Chat Flow</h3>
+                <p>Here's how knowledge flows through the system:</p>
+
+                <div class="module-card">
+                    <h4>1. Daily Creates Entry</h4>
+                    <p>You journal: <em>"Met with Kevin about the LVB curriculum. He suggested we add a module on prompt engineering."</em></p>
+                </div>
+
+                <div class="module-card">
+                    <h4>2. Brain Detects Mentions</h4>
+                    <p>Agent (via hook) scans entry and finds:</p>
+                    <ul>
+                        <li><code>Kevin</code> → resolves to <code>person-abc123</code> (Kevin from Regen Hub)</li>
+                        <li><code>LVB</code> → resolves to <code>project-def456</code> (Learn Vibe Build)</li>
+                        <li><code>prompt engineering</code> → no match, suggests creating topic</li>
+                    </ul>
+                    <p>Brain auto-links the entry and optionally updates entity files with new context.</p>
+                </div>
+
+                <div class="module-card">
+                    <h4>3. Chat Loads Context</h4>
+                    <p>Later, you open Chat and mention "working on LVB". A hook detects this and:</p>
+                    <ul>
+                        <li>Loads <code>Brain/projects/learn-vibe-build.md</code> into context</li>
+                        <li>Loads recent Daily entries mentioning LVB</li>
+                        <li>If the entity points to <code>~/Projects/lvb/</code>, loads that project's AGENTS.md</li>
+                    </ul>
+                </div>
+
+                <div class="module-card">
+                    <h4>4. Brain Updates from Chat</h4>
+                    <p>After the chat, a hook asks: "Update Brain with new information?" New facts about Kevin or LVB get written back to their entity files.</p>
+                </div>
+
+                <h3>Entities Can Point to External Work</h3>
+                <p>Project entities can reference folders outside the vault, enabling context-aware assistance:</p>
+                <div class="code-block">
+                    <div class="code-header">Brain/entities/projects/parachute.md</div>
+                    <pre><code>---
+para_id: project-parachute
+type: project
+status: active
+work_path: ~/Projects/parachute    # External folder
+agents_path: ~/Projects/parachute/CLAUDE.md
+aliases:
+  - Parachute
+  - parachute project
+  - the vault app
+tags:
+  - open-source
+  - flutter
+  - python
+---
+
+# Parachute
+
+Open & interoperable extended mind technology.
+
+## Quick Context
+- Flutter app + Python base server
+- Working on modular architecture restructure
+- See [[learn-vibe-build]] for related teaching
+
+## Relationships
+- [[aaron-gabriel]] - Founder
+- [[kevin-regen-hub]] - Advisor on distribution</code></pre>
+                </div>
+
+                <h3>Dynamic Entity Types</h3>
+                <p>Entity types are not hardcoded. Users start with sensible defaults but can create their own. Daily can suggest new types based on journal content.</p>
+                <div class="code-block">
+                    <div class="code-header">Brain/types.yaml</div>
+                    <pre><code>types:
+  person:
+    icon: "👤"
+    folder: "people"
+    fields: [aliases, tags, relationships]
+
+  project:
+    icon: "📁"
+    folder: "projects"
+    fields: [status, work_path, aliases, tags, relationships]
+
+  topic:
+    icon: "💡"
+    folder: "topics"
+    fields: [aliases, tags]
+
+  resource:
+    icon: "📚"
+    folder: "resources"
+    fields: [url, aliases, tags]
+
+  # User-defined types
+  organization:
+    icon: "🏢"
+    folder: "organizations"
+    fields: [type, aliases, tags, relationships]
+
+  event:
+    icon: "📅"
+    folder: "events"
+    fields: [date, location, attendees]</code></pre>
+                </div>
+
+                <h3>Brain MCP Tools</h3>
+                <p>Available to all modules and agents:</p>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Tool</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>brain-search</code></td>
+                            <td>Semantic search across all entities</td>
+                        </tr>
+                        <tr>
+                            <td><code>brain-resolve</code></td>
+                            <td>Resolve text mention to para_id (alias resolution)</td>
+                        </tr>
+                        <tr>
+                            <td><code>brain-link</code></td>
+                            <td>Create wiki-style link between entries and entities</td>
+                        </tr>
+                        <tr>
+                            <td><code>brain-suggest</code></td>
+                            <td>Suggest entities/types based on text content</td>
+                        </tr>
+                        <tr>
+                            <td><code>brain-types</code></td>
+                            <td>List/create/modify entity types</td>
+                        </tr>
+                        <tr>
+                            <td><code>brain-context</code></td>
+                            <td>Load entity files + related context for a topic</td>
+                        </tr>
+                    </tbody>
+                </table>
             </section>
 
             <!-- Module System -->
             <section class="docs-section" id="modules">
                 <h2>Module System</h2>
-                <p>Every module has a <code>module.py</code> at its root that defines its interface.</p>
+                <p>All modules are vault modules. A fresh vault starts empty—Parachute Computer offers to install official modules (Daily, Chat) during onboarding, but they install into the vault just like any other module.</p>
 
                 <div class="code-block">
                     <div class="code-header">module.py - Module Definition</div>
                     <pre><code>from parachute.core import Module, route, mcp_tool, event
+from parachute.core.brain import brain  # Direct import - Brain is core
 
 class DailyModule(Module):
     """Daily journaling and reflection module."""
@@ -543,9 +748,6 @@ class DailyModule(Module):
         "bash": False,
         "mcp": ["daily-journal", "daily-search"],
     }
-
-    # Declare dependencies on other modules
-    dependencies = ["brain"]
 
     # HTTP Routes (exposed at /api/daily/*)
     @route("GET", "/entries")
@@ -573,7 +775,29 @@ class DailyModule(Module):
     @event("daily.entry.created")
     async def on_entry_created(self, entry_id: str, content: str):
         """Handle new journal entry - trigger reflection pipeline."""
+        # Direct Python call to Brain (it's part of core)
+        mentions = await brain.suggest(content)
+        for mention in mentions:
+            if mention.confidence > 0.8:
+                await brain.link(entry_id, mention.para_id)
+
         await self.trigger_reflection_agent(entry_id)</code></pre>
+                </div>
+
+                <h3>Trusted Module Communication</h3>
+                <p>Trusted modules can directly import and call each other's Python code (they run in the same process):</p>
+                <div class="code-block">
+                    <div class="code-header">Direct Python Imports (Trusted Modules)</div>
+                    <pre><code># In a trusted module, you can import other trusted modules directly
+from parachute.core.brain import brain
+from parachute.modules.daily import daily_module
+
+# Direct function calls - no HTTP overhead
+entities = await brain.search("Kevin")
+entries = await daily_module.get_recent_entries(limit=5)
+
+# This only works for trusted modules in the main container
+# Untrusted modules must use the HTTP API</code></pre>
                 </div>
 
                 <h3>Module Discovery Flow</h3>
@@ -595,23 +819,28 @@ class DailyModule(Module):
 
             <!-- Core Modules -->
             <section class="docs-section" id="core-modules">
-                <h2>Core Modules</h2>
-                <p>Three built-in modules ship with Parachute Computer.</p>
+                <h2>Core Modules (Daily, Chat)</h2>
+                <p>Official Parachute modules available for easy installation. These are <strong>vault modules</strong> like any other—just signed and verified by Parachute.</p>
+
+                <div class="callout callout-info">
+                    <strong>Fresh Vault Experience:</strong> When you create a new vault, it's empty. Parachute Computer asks "Would you like to install recommended modules?" and offers Daily and Chat. They install into your vault just like any module would.
+                </div>
 
                 <div class="module-card">
                     <h4>
                         <span class="module-icon">📔</span>
                         Daily Module
-                        <span class="module-type">Built-in</span>
+                        <span class="module-type">Verified (Parachute)</span>
                     </h4>
                     <p>Voice-first journaling with AI-powered reflections. The foundation of Parachute's "extended mind" experience.</p>
                     <p><strong>Data Location:</strong> <code>~/Parachute/Daily/</code></p>
+                    <p><strong>Source:</strong> <code>parachute://daily</code></p>
                     <div class="module-features">
                         <span>Voice transcription</span>
                         <span>Entry management</span>
                         <span>Reflection agents</span>
                         <span>Journal search</span>
-                        <span>Curator pipeline</span>
+                        <span>Brain integration</span>
                     </div>
                     <p style="margin-top: 1rem; font-size: 0.9rem;"><strong>MCP Tools:</strong> <code>daily-search</code>, <code>daily-today</code>, <code>daily-create</code></p>
                     <p style="font-size: 0.9rem;"><strong>Events:</strong> <code>daily.entry.created</code>, <code>daily.reflection.completed</code></p>
@@ -621,128 +850,75 @@ class DailyModule(Module):
                     <h4>
                         <span class="module-icon">💬</span>
                         Chat Module
-                        <span class="module-type">Built-in</span>
+                        <span class="module-type">Verified (Parachute)</span>
                     </h4>
-                    <p>Conversational AI interface with agentic capabilities. Session management, context folders, and custom agents.</p>
+                    <p>Conversational AI interface with agentic capabilities. Session management, context loading, and Brain-aware conversations.</p>
                     <p><strong>Data Location:</strong> <code>~/Parachute/Chat/</code></p>
+                    <p><strong>Source:</strong> <code>parachute://chat</code></p>
                     <div class="module-features">
                         <span>Streaming chat</span>
                         <span>Session persistence</span>
-                        <span>Context folders</span>
+                        <span>Context loading</span>
                         <span>Agent selection</span>
+                        <span>Brain context</span>
                         <span>Tool permissions</span>
-                        <span>Curator companion</span>
                     </div>
                     <p style="margin-top: 1rem; font-size: 0.9rem;"><strong>MCP Tools:</strong> <code>chat-sessions</code>, <code>chat-context</code></p>
                     <p style="font-size: 0.9rem;"><strong>Events:</strong> <code>chat.session.created</code>, <code>chat.session.message</code></p>
                 </div>
 
+                <h3>Example: User-Created Module</h3>
+                <p>Here's what a Telegram bot module might look like—with agent-level sandboxing:</p>
+
                 <div class="module-card">
                     <h4>
-                        <span class="module-icon">🧠</span>
-                        Brain Module
-                        <span class="module-type">Built-in (New)</span>
+                        <span class="module-icon">🤖</span>
+                        Telegram Bot
+                        <span class="module-type">User-Created</span>
                     </h4>
-                    <p>Structured knowledge graph with <strong>dynamic entity types</strong>. Think Obsidian's knowledge graph + flexible CRM. Entity types are user-defined and can be suggested by Daily based on journal content.</p>
-                    <p><strong>Data Location:</strong> <code>~/Parachute/Brain/</code></p>
+                    <p>Custom bot that responds to Telegram messages with context from a specific project.</p>
+                    <p><strong>Location:</strong> <code>~/Parachute/Modules/telegram-bot/</code></p>
                     <div class="module-features">
-                        <span>Dynamic entity types</span>
-                        <span>Para-ID linking</span>
-                        <span>Alias resolution</span>
-                        <span>Relationship graph</span>
-                        <span>Semantic search</span>
-                        <span>Mention detection</span>
-                        <span>Type suggestions</span>
+                        <span>Telegram integration</span>
+                        <span>Scoped agents</span>
+                        <span>Limited Brain access</span>
                     </div>
-                    <p style="margin-top: 1rem; font-size: 0.9rem;"><strong>MCP Tools:</strong> <code>brain-search</code>, <code>brain-resolve</code>, <code>brain-link</code>, <code>brain-suggest</code>, <code>brain-types</code></p>
-                    <p style="font-size: 0.9rem;"><strong>Events:</strong> <code>brain.entity.created</code>, <code>brain.mention.detected</code>, <code>brain.type.suggested</code></p>
                 </div>
 
-                <h3>Dynamic Entity Types</h3>
-                <p>Entity types are not hardcoded. Users start with sensible defaults (People, Projects, Topics, Resources) but can create their own. Daily can suggest new types based on journal content.</p>
                 <div class="code-block">
-                    <div class="code-header">Brain/types.yaml</div>
-                    <pre><code>types:
-  person:
-    icon: "👤"
-    folder: "people"
-    fields: [aliases, tags, relationships]
+                    <div class="code-header">Modules/telegram-bot/module.py</div>
+                    <pre><code>from parachute.core import Module, route, agent
+from parachute.core.brain import brain
 
-  project:
-    icon: "📁"
-    folder: "projects"
-    fields: [status, aliases, tags, relationships]
+class TelegramBotModule(Module):
+    name = "telegram-bot"
+    version = "0.1.0"
 
-  topic:
-    icon: "💡"
-    folder: "topics"
-    fields: [aliases, tags]
+    # Define agents with different sandbox scopes
+    agents = {
+        "responder": {
+            # This agent can only see one project
+            "paths": [
+                "Brain/projects/client-x.md",
+                "~/Work/client-x/"
+            ],
+            "capabilities": ["read"],
+        },
+        "admin": {
+            # Admin agent has broader access
+            "paths": ["Brain/**"],
+            "capabilities": ["read", "write"],
+        }
+    }
 
-  resource:
-    icon: "📚"
-    folder: "resources"
-    fields: [url, aliases, tags]
-
-  # User-defined types
-  organization:
-    icon: "🏢"
-    folder: "organizations"
-    fields: [type, aliases, tags, relationships]
-
-  event:
-    icon: "📅"
-    folder: "events"
-    fields: [date, location, attendees]</code></pre>
-                </div>
-
-                <h3>Entity File Structure</h3>
-                <p>Entities are markdown files with YAML frontmatter. The para_id system enables stable references across name changes.</p>
-                <div class="code-block">
-                    <div class="code-header">Brain/entities/people/kevin-regen-hub.md</div>
-                    <pre><code>---
-para_id: person-abc123
-type: person
-aliases:
-  - Kevin
-  - Kevin S
-  - Kev
-tags:
-  - collaborator
-  - regen-hub
-created: 2026-01-15
-updated: 2026-01-29
----
-
-# Kevin (Regen Hub)
-
-Co-founder of Regen Hub. Working together on Learn Vibe Build.
-
-## Relationships
-- [[learn-vibe-build]] - Co-instructor
-- [[woven-web]] - Advisor
-
-## Notes
-- Met at ETHDenver 2024
-- Based in Boulder</code></pre>
-                </div>
-
-                <h3>Daily → Brain Integration</h3>
-                <p>When Daily creates an entry, it calls Brain to detect and link mentions:</p>
-                <div class="architecture-visual">
-                    <pre>
-Journal Entry: "Met with Kevin about the LVB curriculum"
-                    │
-                    ▼
-        Daily Module detects mention
-                    │
-                    ▼
-        POST /api/brain/resolve {"text": "Kevin"}
-                    │
-                    ▼
-        Brain returns: {"para_id": "person-abc123", "name": "Kevin (Regen Hub)"}
-                    │
-                    ▼
-        Entry stored with structured reference in metadata</pre>
+    @route("POST", "/webhook")
+    async def handle_telegram(self, message: dict):
+        # Use the scoped responder agent
+        response = await self.run_agent(
+            "responder",
+            f"Answer this question: {message['text']}"
+        )
+        return {"reply": response}</code></pre>
                 </div>
             </section>
 
@@ -845,7 +1021,90 @@ Journal Entry: "Met with Kevin about the LVB curriculum"
             <!-- Sandboxing -->
             <section class="docs-section" id="sandboxing">
                 <h2>Sandboxing &amp; Permissions</h2>
-                <p>Security through containerization and permission enforcement.</p>
+                <p>Security through <strong>agent-level sandboxing</strong> (not module-level) and code verification.</p>
+
+                <div class="callout callout-info">
+                    <strong>Key Insight:</strong> Modules are trusted Python code that runs in the main process. The sandboxing happens at the <strong>agent level</strong>—when Claude SDK runs, that's where containerization and permission scoping matters.
+                </div>
+
+                <h3>Module Hash Verification</h3>
+                <p>Protects against agents modifying their own module code:</p>
+                <div class="code-block">
+                    <div class="code-header">modules.yaml - Hash Verification</div>
+                    <pre><code>modules:
+  telegram-bot:
+    source: local
+    path: "Modules/telegram-bot"
+    trust: trusted
+    hash: "sha256:a1b2c3d4e5f6..."  # Computed on first load
+
+# On server restart:
+# 1. Compute hash of module.py
+# 2. If hash differs from stored → require user re-approval
+# 3. This prevents agents from modifying their own code</code></pre>
+                </div>
+                <p>If a module's code changes (even a single character), the user must re-approve it before it loads. This prevents prompt injection attacks where an agent tries to modify its own permissions.</p>
+
+                <h3>Trust Levels</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Level</th>
+                            <th>Description</th>
+                            <th>Behavior</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Verified</strong></td>
+                            <td>Signed by Parachute (Daily, Chat)</td>
+                            <td>Runs in main container, signature checked</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Trusted</strong></td>
+                            <td>User explicitly trusts this module</td>
+                            <td>Runs in main container, hash verified</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Untrusted</strong></td>
+                            <td>Third-party or experimental</td>
+                            <td>Separate container (future), hash verified</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Agent-Level Sandboxing</h3>
+                <p>The real sandboxing happens when Claude SDK runs. Modules define <strong>agent types</strong> with scoped permissions:</p>
+                <div class="code-block">
+                    <div class="code-header">Agent Sandbox Definition</div>
+                    <pre><code>class TelegramBotModule(Module):
+    # Module runs in main process (trusted)
+    # But its AGENTS run in sandboxed containers
+
+    agents = {
+        "responder": {
+            # Tightly scoped - only sees one project
+            "paths": [
+                "Brain/projects/client-x.md",
+                "~/Work/client-x/"
+            ],
+            "capabilities": ["read"],
+            "bash": False,
+            "network": False,
+        },
+        "admin": {
+            # Broader access but still scoped
+            "paths": ["Brain/**", "Daily/**"],
+            "capabilities": ["read", "write"],
+            "bash": ["git", "npm"],
+            "network": ["api.telegram.org"],
+        }
+    }
+
+    async def handle_message(self, text: str):
+        # When this runs Claude SDK, it uses the "responder" sandbox
+        return await self.run_agent("responder", text)</code></pre>
+                </div>
 
                 <h3>Container Architecture</h3>
                 <div class="architecture-visual">
@@ -854,94 +1113,59 @@ Journal Entry: "Met with Kevin about the LVB curriculum"
 │                        Host Machine                              │
 │                                                                  │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │              Orchestrator Container                        │  │
+│  │              Main Container (Parachute Computer)           │  │
 │  │  • FastAPI server (port 3333)                             │  │
-│  │  • Built-in modules (daily, chat, brain)                  │  │
-│  │  • Permission enforcement                                 │  │
+│  │  • Brain (core)                                           │  │
+│  │  • All trusted modules (loaded as Python)                 │  │
+│  │  • Module hash verification on load                       │  │
 │  │                                                           │  │
 │  │  Volumes:                                                 │  │
 │  │    /vault     ← ~/Parachute (read-write)                  │  │
 │  │    /app       ← Server code (read-only)                   │  │
 │  │                                                           │  │
-│  │  Environment:                                             │  │
-│  │    HOME=/vault (for SDK session storage)                  │  │
-│  │    ANTHROPIC_API_KEY=...                                  │  │
+│  │  When Claude SDK runs → spawns agent sandbox              │  │
 │  └───────────────────────────────────────────────────────────┘  │
 │                              │                                   │
-│                    Internal Docker Network                       │
-│                              │                                   │
+│                              ▼                                   │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │            User Module Container (per untrusted module)   │  │
-│  │  • Isolated Python environment                            │  │
-│  │  • Limited filesystem access (per permissions)            │  │
-│  │  • No direct network access                               │  │
+│  │              Agent Sandbox (per Claude SDK run)            │  │
+│  │  • Scoped filesystem access (per agent definition)        │  │
+│  │  • Scoped bash commands (if any)                          │  │
+│  │  • Scoped network access (if any)                         │  │
+│  │  • HOME=/vault for SDK session storage                    │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘</pre>
                 </div>
 
-                <h3>Trust Levels</h3>
-                <table class="docs-table">
-                    <thead>
-                        <tr>
-                            <th>Level</th>
-                            <th>Description</th>
-                            <th>Sandboxing</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>System</strong></td>
-                            <td>Built-in modules (daily, chat, brain)</td>
-                            <td>Runs in orchestrator, full vault access</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Trusted</strong></td>
-                            <td>User-created modules explicitly promoted</td>
-                            <td>Runs in orchestrator, declared permissions</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Untrusted</strong></td>
-                            <td>Third-party or new modules</td>
-                            <td>Separate container, minimal access</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h3>Permission Declaration</h3>
-                <div class="code-block">
-                    <div class="code-header">Module Permission Example</div>
-                    <pre><code>permissions = {
-    # Filesystem access
-    "read": [
-        "Brain/entities/**",     # Read all brain entities
-        "Daily/entries/*.md",    # Read daily entries (not audio)
-    ],
-    "write": [
-        "Modules/my-module/**",  # Write to own folder only
-    ],
-
-    # Command execution
-    "bash": False,               # No shell access
-    # OR: ["ls", "grep", "find"] # Specific commands only
-
-    # Network access
-    "network": False,            # No outbound network
-    # OR: ["api.example.com"]    # Specific hosts only
-
-    # MCP tool access
-    "mcp": [
-        "brain-search",          # Can search brain
-        "brain-resolve",         # Can resolve mentions
-    ],
-}</code></pre>
-                </div>
+                <h3>Permission Flow</h3>
+                <ol>
+                    <li><strong>Module loads</strong> → Hash checked against stored value</li>
+                    <li><strong>If hash changed</strong> → User must re-approve</li>
+                    <li><strong>Module calls <code>run_agent()</code></strong> → Core looks up agent sandbox definition</li>
+                    <li><strong>Claude SDK spawns</strong> → Runs with scoped permissions from agent definition</li>
+                    <li><strong>Agent tries to access file</strong> → Permission handler checks against allowed paths</li>
+                </ol>
             </section>
 
             <!-- Inter-Module Communication -->
             <section class="docs-section" id="communication">
                 <h2>Inter-Module Communication</h2>
-                <p>Three patterns for modules to talk to each other.</p>
+                <p>Multiple patterns for modules to communicate, depending on trust level.</p>
 
+                <h3>Trusted Modules: Direct Python</h3>
+                <p>Trusted modules run in the same process and can import each other directly:</p>
+                <div class="code-block">
+                    <div class="code-header">Direct Python Calls (Zero Overhead)</div>
+                    <pre><code># In Daily module
+from parachute.core.brain import brain
+from parachute.modules.chat import chat_module
+
+# Direct function calls - no serialization, no HTTP
+mentions = await brain.suggest(entry_content)
+recent_chats = await chat_module.get_sessions(topic="LVB")</code></pre>
+                </div>
+
+                <h3>All Modules: Standard Patterns</h3>
                 <table class="docs-table">
                     <thead>
                         <tr>
@@ -952,25 +1176,30 @@ Journal Entry: "Met with Kevin about the LVB curriculum"
                     </thead>
                     <tbody>
                         <tr>
+                            <td><strong>Direct Import</strong></td>
+                            <td>Trusted module → trusted module</td>
+                            <td><code>from parachute.core.brain import brain</code></td>
+                        </tr>
+                        <tr>
                             <td><strong>Internal HTTP</strong></td>
-                            <td>Synchronous data lookup</td>
-                            <td>Daily calls <code>POST /api/brain/resolve</code></td>
+                            <td>Untrusted module → any module</td>
+                            <td><code>POST /api/brain/resolve</code></td>
                         </tr>
                         <tr>
                             <td><strong>MCP Tools</strong></td>
-                            <td>Agent using another module's capability</td>
+                            <td>Agent using module capabilities</td>
                             <td>Chat agent calls <code>brain-search</code> tool</td>
                         </tr>
                         <tr>
                             <td><strong>Event Bus</strong></td>
-                            <td>Reacting to changes (decoupled)</td>
-                            <td>Brain listens for <code>daily.entry.created</code></td>
+                            <td>Decoupled reactions</td>
+                            <td>Hook listens for <code>daily.entry.created</code></td>
                         </tr>
                     </tbody>
                 </table>
 
                 <div class="callout callout-info">
-                    <strong>Low Latency:</strong> All communication stays on the same machine. Internal HTTP and events have negligible overhead.
+                    <strong>Same Machine:</strong> All communication stays local. Direct Python calls have zero overhead. HTTP calls are localhost-only with negligible latency.
                 </div>
             </section>
 
