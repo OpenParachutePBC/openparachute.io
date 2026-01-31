@@ -1287,105 +1287,167 @@ class OnDailyEntry(Hook):
             <!-- Migration Plan -->
             <section class="docs-section" id="migration">
                 <h2>Migration Plan</h2>
-                <p>Aggressive 1-2 week sprint to restructure. Testing with a separate server instance and unique Flutter app on a sample vault.</p>
+                <p>1-2 week sprint creating <strong>new repositories</strong> with selective code migration from existing system. Test vault at <code>~/ParachuteTest/</code> on port 3334.</p>
 
                 <div class="callout callout-info">
-                    <strong>Approach:</strong> Full restructure in one focused push rather than incremental migration. Parallel development on separate test environment.
+                    <strong>Approach:</strong> Build fresh in new repos, copy code selectively from existing <code>~/Projects/parachute/</code>. Existing system stays untouched as reference.
+                </div>
+
+                <h3>Repository Structure</h3>
+                <div class="code-block">
+                    <div class="code-header">New Repositories</div>
+                    <pre><code>github.com/OpenParachutePBC/
+├── parachute-computer   # Python server + Brain + modules + management UI
+├── parachute-daily      # Daily module (Python + Flutter)
+├── parachute-chat       # Chat module (Python + Flutter)
+├── parachute-app-core   # Shared Flutter package
+└── parachute            # (existing - reference only)</code></pre>
                 </div>
 
                 <div class="phase-card">
                     <h4>
                         <span class="phase-number">1</span>
-                        Core &amp; Module System
+                        Foundation
                         <span class="phase-weeks">Days 1-3</span>
                     </h4>
-                    <p>Build the foundation and module infrastructure.</p>
+                    <p>Core infrastructure with dummy module validation.</p>
                     <ul>
-                        <li>Create <code>parachute.core</code> Python package (SDK wrapper, permissions, database)</li>
-                        <li>Define Module base class with route/MCP/event decorators</li>
-                        <li>Implement module discovery from <code>modules.yaml</code></li>
-                        <li>Set up hooks system (<code>.hooks/</code> directory)</li>
+                        <li>Create <code>parachute-computer</code> repo with FastAPI server skeleton</li>
+                        <li>Implement Brain (entity store, para-id, types, search)</li>
+                        <li>Module base class with <code>@route</code>, <code>@mcp_tool</code>, <code>@event</code> decorators</li>
+                        <li>Module loader (reads <code>modules.yaml</code>, validates hash, registers routes)</li>
+                        <li>Create <code>parachute-app-core</code> with transcription services</li>
+                        <li>Set up test vault at <code>~/ParachuteTest/</code></li>
                     </ul>
                 </div>
 
                 <div class="phase-card">
                     <h4>
                         <span class="phase-number">2</span>
-                        Core Modules
+                        Daily Module
                         <span class="phase-weeks">Days 4-6</span>
                     </h4>
-                    <p>Daily, Chat, and Brain as proper modules.</p>
+                    <p>Daily working end-to-end with Brain integration.</p>
                     <ul>
-                        <li>Refactor Daily as module with <code>/api/daily/*</code> routes</li>
-                        <li>Refactor Chat as module with <code>/api/chat/*</code> routes</li>
-                        <li>Create Brain module (dynamic entity types, search, linking)</li>
-                        <li>Implement event bus + Daily → Brain integration</li>
+                        <li>Create <code>parachute-daily</code> repo (Python module + Flutter package)</li>
+                        <li>Port voice transcription and entry management</li>
+                        <li>Implement minimal reflection agent (validates SDK integration)</li>
+                        <li>Daily → Brain flow: detect mentions, link entities</li>
+                        <li>Verify offline-first entry creation works</li>
                     </ul>
                 </div>
 
                 <div class="phase-card">
                     <h4>
                         <span class="phase-number">3</span>
-                        Flutter Packages
+                        Chat Module
                         <span class="phase-weeks">Days 7-9</span>
                     </h4>
-                    <p>Modular Flutter architecture.</p>
+                    <p>Chat working with Brain context loading.</p>
                     <ul>
-                        <li>Extract <code>parachute_core</code> Flutter package</li>
-                        <li>Create <code>parachute_daily</code> and <code>parachute_chat</code> packages</li>
-                        <li>Build standalone Daily app targeting new module API</li>
-                        <li>Verify end-to-end on test vault</li>
+                        <li>Create <code>parachute-chat</code> repo (Python module + Flutter package)</li>
+                        <li>Port streaming chat and session management</li>
+                        <li>Brain → Chat flow: load context when entities mentioned</li>
+                        <li>Working directory / context folder selection</li>
+                        <li>Post-session Brain update hooks</li>
                     </ul>
                 </div>
 
                 <div class="phase-card">
                     <h4>
                         <span class="phase-number">4</span>
-                        Sandboxing &amp; Polish
+                        Integration &amp; Hardening
                         <span class="phase-weeks">Days 10-14</span>
                     </h4>
-                    <p>Security, isolation, and production readiness.</p>
+                    <p>Full system with security features.</p>
                     <ul>
-                        <li>Dockerize base server with volume mounts</li>
-                        <li>Permission enforcement in main container (trusted modules)</li>
-                        <li>Separate container setup for untrusted modules</li>
-                        <li>Computer management UI (if time permits, otherwise Phase 2)</li>
+                        <li>Hooks system (discovery, event firing, default hooks)</li>
+                        <li>Agent-level sandboxing (scoped permissions for Claude SDK runs)</li>
+                        <li>Module hash verification (re-approve if code changes)</li>
+                        <li>System prompt composition (module + Brain + hooks)</li>
+                        <li>End-to-end validation: Daily → Brain → Chat flow</li>
                     </ul>
                 </div>
+
+                <h3>Test Environment</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Setting</th>
+                            <th>Test</th>
+                            <th>Production</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Vault</td>
+                            <td><code>~/ParachuteTest/</code></td>
+                            <td><code>~/Parachute/</code></td>
+                        </tr>
+                        <tr>
+                            <td>Server Port</td>
+                            <td>3334</td>
+                            <td>3333</td>
+                        </tr>
+                        <tr>
+                            <td>Codebase</td>
+                            <td>New repos</td>
+                            <td>Existing <code>parachute/</code></td>
+                        </tr>
+                    </tbody>
+                </table>
             </section>
 
-            <!-- Open Questions -->
+            <!-- Resolved Decisions -->
             <section class="docs-section" id="questions">
-                <h2>Open Questions</h2>
-                <p>Decisions needed before/during implementation.</p>
+                <h2>Decisions Made</h2>
+                <p>Key architectural decisions resolved during planning.</p>
 
                 <h3>Architecture</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Question</th>
+                            <th>Decision</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Brain: module or core?</td>
+                            <td><strong>Core.</strong> It's the connective tissue all modules depend on. Direct Python imports, always available.</td>
+                        </tr>
+                        <tr>
+                            <td>Module sandboxing level?</td>
+                            <td><strong>Agent-level.</strong> Modules are trusted Python. Sandboxing applies when Claude SDK runs.</td>
+                        </tr>
+                        <tr>
+                            <td>Built-in vs third-party modules?</td>
+                            <td><strong>No distinction.</strong> All modules are vault modules. Parachute modules are just signed/verified.</td>
+                        </tr>
+                        <tr>
+                            <td>Module communication?</td>
+                            <td><strong>Direct Python imports</strong> for trusted modules. HTTP/MCP for untrusted.</td>
+                        </tr>
+                        <tr>
+                            <td>System prompts?</td>
+                            <td><strong>Layered.</strong> Module base + Brain entity context + hook injection.</td>
+                        </tr>
+                        <tr>
+                            <td>Transcription location?</td>
+                            <td><strong>App-core.</strong> Used by both Daily and Chat, stays in shared package.</td>
+                        </tr>
+                        <tr>
+                            <td>SDK session storage?</td>
+                            <td><strong>In vault.</strong> <code>HOME=~/Parachute</code> so <code>.claude/</code> travels with data.</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Remaining Questions (Decide During Implementation)</h3>
                 <ol class="question-list">
-                    <li><strong>Module hot-reload:</strong> Can modules be updated without server restart?</li>
-                    <li><strong>Module versioning:</strong> How do we handle breaking changes in module interfaces?</li>
-                    <li><strong>Shared state:</strong> Should modules share a database, or each have their own?</li>
-                    <li><strong>Agent context:</strong> How do we manage system prompts across modules?</li>
-                </ol>
-
-                <h3>Brain Module</h3>
-                <ol class="question-list" start="5">
-                    <li><strong>Entity types:</strong> Is PARA (Projects, Areas, Resources, Archive) + People sufficient?</li>
-                    <li><strong>Relationship types:</strong> Should relationships be typed (collaborator, advisor) or freeform?</li>
-                    <li><strong>External sync:</strong> How to import from Obsidian, Notion, etc.?</li>
-                </ol>
-
-                <h3>Sandboxing</h3>
-                <ol class="question-list" start="8">
-                    <li><strong>Container overhead:</strong> Is per-module Docker too heavy? Consider gVisor, Firecracker?</li>
-                    <li><strong>Claude API access:</strong> Should user modules have direct Claude access or go through core?</li>
-                    <li><strong>Network policies:</strong> How granular should outbound network restrictions be?</li>
-                </ol>
-
-                <h3>Flutter</h3>
-                <ol class="question-list" start="11">
-                    <li><strong>Package distribution:</strong> How do we distribute <code>parachute_core</code> to third-party developers?</li>
-                    <li><strong>Feature flags:</strong> How do optional features (transcription) get included/excluded?</li>
-                    <li><strong>Theme customization:</strong> Per-module theming, or unified across all apps?</li>
+                    <li><strong>Module hot-reload:</strong> Can modules update without server restart?</li>
+                    <li><strong>Relationship types:</strong> Should Brain relationships be typed or freeform?</li>
+                    <li><strong>Reflection agent scope:</strong> What should the minimal reflection agent do exactly?</li>
                 </ol>
             </section>
 
@@ -1404,7 +1466,7 @@ class OnDailyEntry(Hook):
     </div>
     <footer>
         <p>&copy; 2026 Open Parachute, PBC. A Colorado Public Benefit Corporation.</p>
-        <p>PRD last updated: January 29, 2026</p>
+        <p>PRD last updated: January 30, 2026</p>
     </footer>
 </body>
 </html>
