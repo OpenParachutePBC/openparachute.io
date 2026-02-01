@@ -288,7 +288,7 @@
                     <li><a href="#vision">Vision &amp; Principles</a></li>
                     <li><a href="#architecture">Architecture Overview</a></li>
                     <li><a href="#core">Parachute Computer Core</a></li>
-                    <li><a href="#brain">Brain: The Connective Layer</a></li>
+                    <li><a href="#brain">Brain Module &amp; Interface System</a></li>
                     <li><a href="#modules">Module System</a></li>
                     <li><a href="#core-modules">Core Modules (Daily, Chat)</a></li>
                     <li><a href="#flutter">Flutter App Architecture</a></li>
@@ -306,7 +306,7 @@
                 <p>Parachute is evolving from a monolithic application into a <strong>modular personal computer platform</strong>. This PRD defines the architecture for:</p>
                 <ul>
                     <li><strong>Parachute Computer</strong> - The foundational platform (Python server + management UI)</li>
-                    <li><strong>Brain</strong> - Integrated connective layer for knowledge, context, and memory</li>
+                    <li><strong>Brain Module</strong> - Knowledge layer with published interface (optional, swappable)</li>
                     <li><strong>Module System</strong> - Discoverable modules that extend functionality (all modules are vault modules)</li>
                     <li><strong>Core Modules</strong> - Daily and Chat as the first installable modules</li>
                     <li><strong>Flutter App Architecture</strong> - Shared <code>parachute_core</code> package with separate apps</li>
@@ -539,16 +539,16 @@ modules:
                 </div>
             </section>
 
-            <!-- Brain: The Connective Layer -->
+            <!-- Brain Module & Interface System -->
             <section class="docs-section" id="brain">
-                <h2>Brain: The Connective Layer</h2>
-                <p>Brain isn't just another module—it's <strong>integrated into the core</strong> as the connective tissue between all modules. It provides the shared context layer that enables intelligent cross-module communication.</p>
+                <h2>Brain Module &amp; Interface System</h2>
+                <p>Brain is a <strong>module with a published interface</strong>, not baked into core. This enables users to upgrade, swap, or even skip Brain entirely. Modules depend on interfaces, not implementations.</p>
 
                 <div class="callout callout-info">
-                    <strong>Key Insight:</strong> Brain connects Daily and Chat (and future modules) through shared knowledge, context, and memory. It's not optional infrastructure—it's foundational.
+                    <strong>Key Insight:</strong> Daily and Chat work without Brain—they just get smarter when Brain is installed. Interface-based dependencies mean loose coupling and graceful degradation.
                 </div>
 
-                <h3>Brain as Core Infrastructure</h3>
+                <h3>Interface-Based Architecture</h3>
                 <div class="architecture-visual">
                     <pre>
                     ┌─────────────────────────────────────┐
@@ -559,18 +559,18 @@ modules:
                                    │
                                    ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│                          BRAIN (Core)                                 │
+│                    BRAIN MODULE (BrainInterface)                      │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │
 │  │   Entity    │  │   Para-ID   │  │  Relation   │  │  Context    │ │
 │  │   Store     │  │   System    │  │   Graph     │  │  Provider   │ │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │
 │                                                                       │
+│  Publishes: BrainInterface (search, resolve, link, suggest)          │
+│  Other modules optionally depend on this interface                   │
+│                                                                       │
 │  ~/Parachute/Brain/                                                  │
 │    types.yaml          # Dynamic entity type definitions             │
 │    entities/           # Markdown files per entity                   │
-│      people/           # Person entities                             │
-│      projects/         # Project entities (can point to folders)     │
-│      topics/           # Topic entities                              │
 └──────────────────────────────────────────────────────────────────────┘
                                    │
                                    ▼
@@ -732,7 +732,7 @@ Open & interoperable extended mind technology.
                 <div class="code-block">
                     <div class="code-header">module.py - Module Definition</div>
                     <pre><code>from parachute.core import Module, route, mcp_tool, event
-from parachute.core.brain import brain  # Direct import - Brain is core
+from parachute.core import Module, route, mcp_tool, event
 
 class DailyModule(Module):
     """Daily journaling and reflection module."""
@@ -775,11 +775,13 @@ class DailyModule(Module):
     @event("daily.entry.created")
     async def on_entry_created(self, entry_id: str, content: str):
         """Handle new journal entry - trigger reflection pipeline."""
-        # Direct Python call to Brain (it's part of core)
-        mentions = await brain.suggest(content)
-        for mention in mentions:
-            if mention.confidence > 0.8:
-                await brain.link(entry_id, mention.para_id)
+        # Check if Brain module is available (optional dependency)
+        brain = self.get_interface("BrainInterface")
+        if brain:
+            mentions = await brain.suggest(content)
+            for mention in mentions:
+                if mention.confidence > 0.8:
+                    await brain.link(entry_id, mention.para_id)
 
         await self.trigger_reflection_agent(entry_id)</code></pre>
                 </div>
@@ -1115,7 +1117,7 @@ class TelegramBotModule(Module):
 │  ┌───────────────────────────────────────────────────────────┐  │
 │  │              Main Container (Parachute Computer)           │  │
 │  │  • FastAPI server (port 3333)                             │  │
-│  │  • Brain (core)                                           │  │
+│  │  • Brain module (if installed)                            │  │
 │  │  • All trusted modules (loaded as Python)                 │  │
 │  │  • Module hash verification on load                       │  │
 │  │                                                           │  │
@@ -1297,7 +1299,8 @@ class OnDailyEntry(Hook):
                 <div class="code-block">
                     <div class="code-header">New Repositories</div>
                     <pre><code>github.com/OpenParachutePBC/
-├── parachute-computer   # Python server + Brain + modules + management UI
+├── parachute-computer   # Python server + module system (NO Brain!)
+├── parachute-brain      # Brain module - publishes BrainInterface
 ├── parachute-daily      # Daily module (Python + Flutter)
 ├── parachute-chat       # Chat module (Python + Flutter)
 ├── parachute-app-core   # Shared Flutter package
@@ -1414,7 +1417,7 @@ class OnDailyEntry(Hook):
                     <tbody>
                         <tr>
                             <td>Brain: module or core?</td>
-                            <td><strong>Core.</strong> It's the connective tissue all modules depend on. Direct Python imports, always available.</td>
+                            <td><strong>Module.</strong> Publishes BrainInterface. Other modules optionally depend on interface, not implementation. Can be upgraded/swapped.</td>
                         </tr>
                         <tr>
                             <td>Module sandboxing level?</td>
