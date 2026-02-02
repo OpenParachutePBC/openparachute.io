@@ -275,8 +275,8 @@
                 <h1>PRD: Modular Parachute Computer</h1>
                 <p class="lead">Restructuring Parachute from a monolithic application into a modular personal computer platform.</p>
                 <div class="prd-meta">
-                    <span><strong>Version:</strong> 0.1.0</span>
-                    <span><strong>Date:</strong> January 29, 2026</span>
+                    <span><strong>Version:</strong> 0.2.0</span>
+                    <span><strong>Date:</strong> February 2, 2026</span>
                     <span><strong>Author:</strong> Aaron Gabriel</span>
                 </div>
             </div>
@@ -287,16 +287,22 @@
                 <ol>
                     <li><a href="#vision">Vision &amp; Principles</a></li>
                     <li><a href="#architecture">Architecture Overview</a></li>
+                    <li><a href="#cli">Parachute CLI</a></li>
                     <li><a href="#core">Parachute Computer Core</a></li>
+                    <li><a href="#manifest">Module Manifest</a></li>
                     <li><a href="#brain">Brain Module &amp; Interface System</a></li>
                     <li><a href="#modules">Module System</a></li>
                     <li><a href="#core-modules">Core Modules (Daily, Chat)</a></li>
                     <li><a href="#flutter">Flutter App Architecture</a></li>
-                    <li><a href="#sandboxing">Sandboxing &amp; Permissions</a></li>
+                    <li><a href="#sandboxing">Agent Sandboxing</a></li>
+                    <li><a href="#chat-modes">Chat Sandbox Modes</a></li>
+                    <li><a href="#api-keys">API Key Scoping</a></li>
                     <li><a href="#communication">Inter-Module Communication</a></li>
                     <li><a href="#hooks">Hooks System</a></li>
+                    <li><a href="#auth">Claude Authentication</a></li>
+                    <li><a href="#testing">Testing Strategy</a></li>
                     <li><a href="#migration">Migration Plan</a></li>
-                    <li><a href="#questions">Open Questions</a></li>
+                    <li><a href="#questions">Decisions &amp; Questions</a></li>
                 </ol>
             </div>
 
@@ -442,6 +448,73 @@
                 </table>
             </section>
 
+            <!-- Parachute CLI -->
+            <section class="docs-section" id="cli">
+                <h2>Parachute CLI</h2>
+                <p>The <code>parachute</code> CLI is the primary interface for managing Parachute on any system (Mac, Linux, headless servers, Raspberry Pi).</p>
+
+                <h3>Commands</h3>
+                <div class="code-block">
+                    <div class="code-header">CLI Reference</div>
+                    <pre><code># Server management
+parachute start                    # Start server (default port 3333)
+parachute start --port 3334        # Start on custom port
+parachute stop                     # Stop server
+parachute status                   # Show server status
+
+# Module management
+parachute modules list             # List installed modules
+parachute modules install &lt;url&gt;    # Install from git repo
+parachute modules install &lt;path&gt; --dev   # Install from local path (symlink)
+parachute modules install &lt;url&gt; --path python/  # Install subdirectory of repo
+parachute modules remove &lt;name&gt;    # Remove a module
+parachute modules status           # Show module status (loaded, pending approval, etc.)
+parachute modules diff &lt;name&gt;      # Show what changed in pending update
+parachute modules approve &lt;name&gt;   # Approve module update
+
+# Configuration
+parachute config                   # Show current config
+parachute config set &lt;key&gt; &lt;value&gt; # Set config value
+parachute vault                    # Show vault path
+parachute vault set &lt;path&gt;         # Set vault path
+
+# Authentication
+parachute auth status              # Show auth status
+parachute keys list                # List API keys
+parachute keys create &lt;name&gt;       # Create new API key
+parachute keys revoke &lt;name&gt;       # Revoke API key</code></pre>
+                </div>
+
+                <h3>Module Installation Flow</h3>
+                <div class="code-block">
+                    <div class="code-header">Example: Installing Brain Module</div>
+                    <pre><code>$ parachute modules install https://github.com/OpenParachutePBC/parachute-brain
+
+Cloning parachute-brain...
+Validating manifest.yaml...
+  Name: brain
+  Version: 1.0.0
+  Provides: BrainInterface
+
+Installing dependencies...
+Computing hash: sha256:abc123...
+
+✓ Module 'brain' installed and approved
+  Path: ~/.modules/brain/
+
+Restart server to load: parachute restart</code></pre>
+                </div>
+
+                <h3>Implementation</h3>
+                <p>The CLI lives in <code>parachute-computer</code> and is installed via pip:</p>
+                <div class="code-block">
+                    <pre><code>pip install parachute-computer
+# or
+pipx install parachute-computer</code></pre>
+                </div>
+                <p>This provides the <code>parachute</code> command globally, enabling management of Parachute on headless servers, Raspberry Pis, and any Linux/Mac system.</p>
+            </section>
+
             <!-- Parachute Computer Core -->
             <section class="docs-section" id="core">
                 <h2>Parachute Computer Core</h2>
@@ -537,6 +610,140 @@ modules:
     trust: untrusted             # Runs in separate container
     hash: "sha256:xyz789..."</code></pre>
                 </div>
+            </section>
+
+            <!-- Module Manifest -->
+            <section class="docs-section" id="manifest">
+                <h2>Module Manifest</h2>
+                <p>Every module must have a <code>manifest.yaml</code> at its root defining its metadata, interfaces, agents, and capabilities.</p>
+
+                <div class="code-block">
+                    <div class="code-header">manifest.yaml - Complete Example</div>
+                    <pre><code># Required fields
+name: brain
+version: 1.0.0
+description: Knowledge layer for Parachute
+
+# Entry point - must export a class inheriting from Module
+module: module.py
+
+# What interfaces this module provides
+provides:
+  - BrainInterface
+
+# What interfaces this module can use (optional dependencies)
+optional_requires:
+  - JournalInterface
+  - ConversationInterface
+
+# Python dependencies (installed in module's virtualenv)
+dependencies:
+  - pyyaml>=6.0
+  - aiofiles>=23.0
+
+# Agents defined by this module
+agents:
+  indexer:
+    description: "Indexes new content into the knowledge graph"
+    sandbox:
+      workspace_access: rw      # none | ro | rw
+      allowed_paths:
+        - Brain/
+      network: none             # none | bridge
+      memory: 512m
+      cpus: 1.0
+      pids_limit: 256
+    system_prompt: prompts/indexer.md
+    capabilities:
+      - Read
+      - Write
+      - Edit
+
+# Hooks this module registers
+hooks:
+  - event: daily.entry.created
+    handler: hooks:on_entry_created
+    async: true
+
+# MCP tools exposed (callable by other modules' agents)
+mcp_tools:
+  - name: brain_search
+    description: Search entities by keyword
+    handler: tools:brain_search
+  - name: brain_resolve
+    description: Resolve text to para_id
+    handler: tools:brain_resolve
+
+# API routes (auto-prefixed with /api/{module_name}/)
+routes:
+  prefix: /api/brain</code></pre>
+                </div>
+
+                <h3>Module Directory Structure</h3>
+                <div class="code-block">
+                    <div class="code-header">Example: parachute-brain/</div>
+                    <pre><code>parachute-brain/
+├── manifest.yaml           # Required: module metadata
+├── module.py               # Required: exports BrainModule class
+├── interface.py            # Interface definition (BrainInterface)
+├── store.py                # Entity storage
+├── search.py               # Search implementation
+├── tools.py                # MCP tool handlers
+├── hooks.py                # Hook handlers
+├── prompts/
+│   └── indexer.md          # Agent system prompts
+├── tests/
+│   └── test_brain.py
+└── CLAUDE.md               # Instructions for AI working on this module</code></pre>
+                </div>
+
+                <h3>Key Manifest Fields</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Required</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>name</code></td>
+                            <td>Yes</td>
+                            <td>Unique module identifier</td>
+                        </tr>
+                        <tr>
+                            <td><code>version</code></td>
+                            <td>Yes</td>
+                            <td>Semantic version string</td>
+                        </tr>
+                        <tr>
+                            <td><code>module</code></td>
+                            <td>Yes</td>
+                            <td>Python file exporting Module subclass</td>
+                        </tr>
+                        <tr>
+                            <td><code>provides</code></td>
+                            <td>No</td>
+                            <td>Interfaces this module publishes</td>
+                        </tr>
+                        <tr>
+                            <td><code>optional_requires</code></td>
+                            <td>No</td>
+                            <td>Interfaces this module can use (graceful if missing)</td>
+                        </tr>
+                        <tr>
+                            <td><code>agents</code></td>
+                            <td>No</td>
+                            <td>Agent definitions with sandbox configs</td>
+                        </tr>
+                        <tr>
+                            <td><code>mcp_tools</code></td>
+                            <td>No</td>
+                            <td>MCP tools exposed to other modules' agents</td>
+                        </tr>
+                    </tbody>
+                </table>
             </section>
 
             <!-- Brain Module & Interface System -->
@@ -991,42 +1198,121 @@ class TelegramBotModule(Module):
                     </tbody>
                 </table>
 
-                <h3>App Configurations</h3>
-                <table class="docs-table">
-                    <thead>
-                        <tr>
-                            <th>App</th>
-                            <th>Packages</th>
-                            <th>Use Case</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><strong>Parachute Daily</strong></td>
-                            <td>core + daily</td>
-                            <td>Standalone journaling app (what ships first)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Parachute Chat</strong></td>
-                            <td>core + chat</td>
-                            <td>Standalone chat app</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Parachute Computer</strong></td>
-                            <td>core + daily + chat + computer</td>
-                            <td>Full experience with module management</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <h3>Unified Shell Architecture</h3>
+                <p>The shell application dynamically loads module UIs based on what's installed on the server.</p>
+
+                <div class="code-block">
+                    <div class="code-header">shell/app.dart</div>
+                    <pre><code>class ParachuteApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: ShellScaffold(
+        // Modules register their UI widgets
+        modules: [
+          if (moduleRegistry.hasModule('daily'))
+            ModuleTab(
+              name: 'Daily',
+              icon: Icons.today,
+              builder: () => DailyApp(),  // From parachute-daily/flutter
+            ),
+          if (moduleRegistry.hasModule('chat'))
+            ModuleTab(
+              name: 'Chat',
+              icon: Icons.chat,
+              builder: () => ChatApp(),   // From parachute-chat/flutter
+            ),
+        ],
+      ),
+    );
+  }
+}</code></pre>
+                </div>
+
+                <p>Each module's Flutter package exports a top-level widget that the shell loads:</p>
+
+                <div class="code-block">
+                    <div class="code-header">parachute-daily/flutter/lib/daily_module.dart</div>
+                    <pre><code>class DailyApp extends StatelessWidget {
+  // This is the entry point the shell loads
+  // It receives server connection from app-core
+}</code></pre>
+                </div>
+
+                <h3>pubspec.yaml Dependencies</h3>
+                <div class="code-block">
+                    <div class="code-header">parachute-app-core/pubspec.yaml</div>
+                    <pre><code>dependencies:
+  flutter:
+    sdk: flutter
+  parachute_daily:
+    path: ../parachute-daily/flutter  # or git reference
+  parachute_chat:
+    path: ../parachute-chat/flutter</code></pre>
+                </div>
+
+                <div class="callout callout-info">
+                    <strong>MVP Approach:</strong> Module Flutter packages are included at build time via pubspec.yaml path references. Dynamic runtime loading (like VS Code extensions) is future work.
+                </div>
             </section>
 
-            <!-- Sandboxing -->
+            <!-- Agent Sandboxing -->
             <section class="docs-section" id="sandboxing">
-                <h2>Sandboxing &amp; Permissions</h2>
-                <p>Security through <strong>agent-level sandboxing</strong> (not module-level) and code verification.</p>
+                <h2>Agent Sandboxing</h2>
+                <p>Agents run in Docker containers with configurable isolation. This is based on OpenClaw's battle-tested sandboxing model.</p>
 
                 <div class="callout callout-info">
                     <strong>Key Insight:</strong> Modules are trusted Python code that runs in the main process. The sandboxing happens at the <strong>agent level</strong>—when Claude SDK runs, that's where containerization and permission scoping matters.
+                </div>
+
+                <h3>Sandbox Configuration</h3>
+                <p>Defined in module's <code>manifest.yaml</code> or at runtime:</p>
+                <div class="code-block">
+                    <div class="code-header">SandboxConfig</div>
+                    <pre><code>@dataclass
+class SandboxConfig:
+    # Filesystem access
+    workspace_access: str = "none"  # none | ro | rw
+    allowed_paths: list[str] = []   # Paths within vault (e.g., ["Daily/", "Brain/"])
+
+    # Resource limits
+    memory: str = "512m"
+    cpus: float = 1.0
+    pids_limit: int = 256
+
+    # Network
+    network: str = "none"  # none | bridge
+
+    # Security
+    read_only_root: bool = True
+    cap_drop: list[str] = ["ALL"]</code></pre>
+                </div>
+
+                <h3>Container Implementation</h3>
+                <p>When an agent runs, parachute-computer:</p>
+                <ol>
+                    <li>Creates a Docker container from <code>parachute-sandbox:latest</code> (Debian slim)</li>
+                    <li>Mounts vault paths as specified in <code>allowed_paths</code></li>
+                    <li>Sets resource limits</li>
+                    <li>Runs Claude SDK inside the container</li>
+                    <li>Captures output and cleans up</li>
+                </ol>
+
+                <div class="code-block">
+                    <div class="code-header">Dockerfile.sandbox</div>
+                    <pre><code>FROM debian:bookworm-slim
+
+# Install Claude CLI and dependencies
+RUN apt-get update && apt-get install -y \
+    python3 python3-pip nodejs npm curl \
+    && npm install -g @anthropic-ai/claude-code \
+    && rm -rf /var/lib/apt/lists/*
+
+# Non-root user
+RUN useradd -m -u 1000 parachute
+USER parachute
+
+WORKDIR /workspace</code></pre>
                 </div>
 
                 <h3>Module Hash Verification</h3>
@@ -1149,6 +1435,179 @@ class TelegramBotModule(Module):
                 </ol>
             </section>
 
+            <!-- Chat Sandbox Modes -->
+            <section class="docs-section" id="chat-modes">
+                <h2>Chat Sandbox Modes</h2>
+                <p>The Chat module defines three agent configurations with different trust levels.</p>
+
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Mode</th>
+                            <th>Trust</th>
+                            <th>Sandbox</th>
+                            <th>Use Case</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Default</strong></td>
+                            <td>Low</td>
+                            <td>Locked</td>
+                            <td>General conversation (like Claude.ai)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Workspace</strong></td>
+                            <td>Medium</td>
+                            <td>Scoped to cwd</td>
+                            <td>Working in a project directory</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Trusted</strong></td>
+                            <td>High</td>
+                            <td>None</td>
+                            <td>Power user, full access</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="code-block">
+                    <div class="code-header">Chat Module Agent Configurations</div>
+                    <pre><code>class ChatModule(Module):
+    name = "chat"
+    provides = ["ConversationInterface"]
+    optional_requires = ["BrainInterface", "JournalInterface"]
+
+    agents = {
+        "default": AgentConfig(
+            description="Safe general assistant (like Claude.ai)",
+            sandbox=SandboxConfig(
+                workspace_access="none",
+                network="bridge",  # Can call MCPs
+            ),
+            allowed_interfaces=["BrainInterface", "JournalInterface"],
+            capabilities=["Read"],  # Can read vault via interfaces, not direct FS
+            system_prompt="prompts/default.md",
+        ),
+
+        "workspace": AgentConfig(
+            description="Project-focused assistant with file access",
+            sandbox=SandboxConfig(
+                workspace_access="rw",
+                allowed_paths=["${CWD}"],  # Scoped to selected directory
+                network="bridge",
+            ),
+            capabilities=["Read", "Write", "Edit", "Bash"],
+            system_prompt="prompts/workspace.md",
+            load_cwd_claude_md=True,  # Load CLAUDE.md from selected directory
+        ),
+
+        "trusted": AgentConfig(
+            description="Full access (power user mode)",
+            sandbox=None,  # No sandbox
+            requires_explicit_approval=True,
+            capabilities=["Read", "Write", "Edit", "Bash", "Computer"],
+            system_prompt="prompts/trusted.md",
+        ),
+    }</code></pre>
+                </div>
+
+                <h3>System Prompt Composition</h3>
+                <p>For each mode, system prompts compose differently:</p>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Mode</th>
+                            <th>Prompt Components</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Default</td>
+                            <td>Chat module base prompt → Brain context → Journal context</td>
+                        </tr>
+                        <tr>
+                            <td>Workspace</td>
+                            <td>Workspace prompt → CLAUDE.md from cwd → Brain context → Project-specific context</td>
+                        </tr>
+                        <tr>
+                            <td>Trusted</td>
+                            <td>Trusted prompt → Full Brain access → All CLAUDE.md files in hierarchy</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- API Key Scoping -->
+            <section class="docs-section" id="api-keys">
+                <h2>API Key Scoping</h2>
+                <p>API keys are scoped by module to provide fine-grained access control for multi-device access.</p>
+
+                <div class="code-block">
+                    <div class="code-header">~/.parachute/keys.yaml</div>
+                    <pre><code>api_keys:
+  - key_hash: "sha256:abc123..."
+    name: "iPhone"
+    created: "2024-01-15T10:30:00Z"
+    scopes:
+      - module: "daily"
+        capabilities: ["read", "write"]
+      - module: "chat"
+        capabilities: ["read", "write"]
+      - module: "brain"
+        capabilities: ["read"]  # Can query but not modify
+
+  - key_hash: "sha256:def456..."
+    name: "Shared Family Device"
+    scopes:
+      - module: "daily"
+        capabilities: ["read"]  # Read-only access to journal
+
+  - key_hash: "sha256:ghi789..."
+    name: "Admin Device"
+    scopes:
+      - module: "*"
+        capabilities: ["read", "write", "admin"]  # Full access + module management</code></pre>
+                </div>
+
+                <h3>Enforcement Flow</h3>
+                <ol>
+                    <li>Request arrives with <code>Authorization: Bearer &lt;key&gt;</code></li>
+                    <li>Server hashes key (SHA-256), looks up in registry</li>
+                    <li>Extracts module from route (e.g., <code>/api/daily/entries</code> → <code>daily</code>)</li>
+                    <li>Checks if key has scope for that module + capability</li>
+                    <li>Returns 403 Forbidden if not authorized</li>
+                </ol>
+
+                <h3>Special Scopes</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Scope</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>module: "*"</code></td>
+                            <td>Access all modules</td>
+                        </tr>
+                        <tr>
+                            <td><code>capabilities: ["admin"]</code></td>
+                            <td>Module management (approve upgrades, install/remove modules)</td>
+                        </tr>
+                        <tr>
+                            <td>Localhost bypass</td>
+                            <td>Configurable via <code>auth_mode: remote|always|disabled</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="callout callout-info">
+                    <strong>Cross-Module Access:</strong> When modules call each other via interfaces (not HTTP), they use the module's own permissions, not the API key's. API key scoping only applies to external HTTP access.
+                </div>
+            </section>
+
             <!-- Inter-Module Communication -->
             <section class="docs-section" id="communication">
                 <h2>Inter-Module Communication</h2>
@@ -1220,28 +1679,45 @@ recent_chats = await chat_module.get_sessions(topic="LVB")</code></pre>
 └── on-project-mention.py  # Load project AGENTS.md</code></pre>
                 </div>
 
-                <h3>Hook Interface</h3>
+                <h3>Hook Configuration</h3>
+                <p>Hooks follow Claude Code's compatible format—stdin JSON, exit codes, stdout response:</p>
+
                 <div class="code-block">
-                    <div class="code-header">hooks/on-daily-entry.py</div>
-                    <pre><code>from parachute.hooks import Hook, context
+                    <div class="code-header">~/.parachute/hooks.yaml</div>
+                    <pre><code>hooks:
+  daily.entry.created:
+    - type: "command"
+      command: "python -m parachute_brain.hooks.detect_mentions"
+      timeout: 30
+    - type: "command"
+      command: "/path/to/custom/backup-script.sh"
+      async: true  # Non-blocking
 
-class OnDailyEntry(Hook):
-    """Triggered when a new journal entry is created."""
-
-    event = "daily.entry.created"
-
-    async def run(self, entry_id: str, content: str):
-        # Detect mentions and link to Brain
-        mentions = await context.brain.suggest(content)
-
-        for mention in mentions:
-            if mention.confidence > 0.8:
-                await context.brain.link(entry_id, mention.para_id)
-
-        # Maybe trigger reflection if conditions met
-        if self.should_reflect(content):
-            await context.daily.trigger_reflection(entry_id)</code></pre>
+  session.end:
+    - type: "command"
+      command: "python -m parachute.hooks.activity_summary"</code></pre>
                 </div>
+
+                <h3>Hook I/O</h3>
+                <p>Hooks receive JSON on <strong>stdin</strong> and return results via <strong>exit code</strong>:</p>
+                <div class="code-block">
+                    <div class="code-header">Input JSON (stdin)</div>
+                    <pre><code>{
+  "event": "daily.entry.created",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "vault_path": "/Users/aaron/Parachute",
+  "module": "daily",
+  "data": {
+    "entry_id": "2024-01-15-morning",
+    "entry_path": "/Users/aaron/Parachute/Daily/entries/2024-01-15-morning.md"
+  }
+}</code></pre>
+                </div>
+                <ul>
+                    <li><strong>Exit 0</strong> = success (stdout parsed as JSON if present)</li>
+                    <li><strong>Exit 2</strong> = blocking error (stderr fed to caller, action blocked if blockable)</li>
+                    <li><strong>Other</strong> = non-blocking error (logged, execution continues)</li>
+                </ul>
 
                 <h3>Hook Events</h3>
                 <table class="docs-table">
@@ -1284,6 +1760,123 @@ class OnDailyEntry(Hook):
                 <div class="callout callout-info">
                     <strong>vs. Curator:</strong> Hooks are user-configurable and event-driven. The current curator approach becomes a default hook that users can modify or replace.
                 </div>
+            </section>
+
+            <!-- Claude Authentication -->
+            <section class="docs-section" id="auth">
+                <h2>Claude Authentication</h2>
+                <p>Parachute uses Claude's native authentication rather than managing API keys directly.</p>
+
+                <h3>How It Works</h3>
+                <p>Users authenticate with Claude directly:</p>
+                <div class="code-block">
+                    <pre><code># On the host machine (one-time setup)
+claude login</code></pre>
+                </div>
+                <p>This stores OAuth credentials in <code>~/.claude/.credentials.json</code>. With the HOME override, credentials land in <code>~/Parachute/.claude/.credentials.json</code>, making them portable with the vault.</p>
+
+                <h3>Credential Discovery</h3>
+                <p>The Claude SDK checks in order:</p>
+                <ol>
+                    <li><code>ANTHROPIC_API_KEY</code> environment variable</li>
+                    <li><code>CLAUDE_CODE_OAUTH_TOKEN</code> environment variable</li>
+                    <li>Stored credentials in <code>~/.claude/.credentials.json</code></li>
+                </ol>
+                <p>Parachute relies on option 3 with the HOME override.</p>
+
+                <h3>Headless / Remote Servers</h3>
+                <p>For servers without a browser (Linux VPS, Raspberry Pi):</p>
+                <div class="code-block">
+                    <pre><code># On a machine with a browser
+claude login
+# Copy credentials to remote server
+scp ~/.claude/.credentials.json user@server:~/Parachute/.claude/</code></pre>
+                </div>
+
+                <h3>Why Not API Keys?</h3>
+                <ul>
+                    <li><strong>Simpler</strong>: Users don't manage a separate API key</li>
+                    <li><strong>Consistent</strong>: Same auth model as Claude Code CLI</li>
+                    <li><strong>Secure</strong>: OAuth tokens are scoped and refreshable</li>
+                    <li><strong>Portable</strong>: Credentials move with vault</li>
+                </ul>
+            </section>
+
+            <!-- Testing Strategy -->
+            <section class="docs-section" id="testing">
+                <h2>Testing Strategy</h2>
+                <p>Comprehensive testing across all layers: unit, integration, and end-to-end.</p>
+
+                <h3>Backend Testing (Python)</h3>
+                <p><strong>Framework:</strong> pytest + pytest-asyncio</p>
+                <div class="code-block">
+                    <div class="code-header">Test Directory Structure</div>
+                    <pre><code>parachute-computer/tests/
+├── unit/
+│   ├── test_module_loader.py
+│   ├── test_interface_registry.py
+│   └── test_sandbox.py
+├── integration/
+│   ├── test_module_lifecycle.py
+│   └── test_hook_execution.py
+└── api/
+    ├── test_modules_api.py
+    └── test_health.py</code></pre>
+                </div>
+
+                <h3>Frontend Testing (Flutter)</h3>
+                <p><strong>Frameworks:</strong> Widget tests (built-in), Integration tests (built-in), <strong>Patrol</strong> for E2E</p>
+
+                <div class="callout callout-info">
+                    <strong>Why Patrol over Playwright:</strong> Flutter renders to canvas, not DOM. Playwright can't inspect Flutter widgets. Patrol integrates with Flutter's semantics tree for reliable element selection.
+                </div>
+
+                <h3>End-to-End Testing</h3>
+                <p><strong>Flow:</strong> Start test server → Run Flutter app → Execute Patrol tests</p>
+                <div class="code-block">
+                    <div class="code-header">CI Script</div>
+                    <pre><code>#!/bin/bash
+set -e
+
+# Start test server
+VAULT_PATH=~/ParachuteTest PORT=3334 parachute start &
+sleep 5
+
+# Run backend tests
+cd parachute-computer && pytest
+cd parachute-brain && pytest
+cd parachute-daily/python && pytest
+cd parachute-chat/python && pytest
+
+# Run Flutter tests
+cd parachute-app-core
+flutter test
+patrol test --target integration_test/e2e_test.dart
+
+# Cleanup
+parachute stop</code></pre>
+                </div>
+
+                <h3>Agentic Testing</h3>
+                <p>For dynamic testing beyond scripted scenarios, leverage Claude to explore the app:</p>
+                <div class="code-block">
+                    <pre><code>claude --prompt "
+You are testing the Parachute app running on localhost:3334.
+Explore the Daily module:
+1. Create a voice entry (simulate with text)
+2. Verify it appears in the entry list
+3. Check that Brain linking works if Brain is installed
+4. Report any issues you find
+"</code></pre>
+                </div>
+
+                <h3>CI/CD Pipeline</h3>
+                <p>GitHub Actions workflow runs on every push:</p>
+                <ul>
+                    <li><strong>Backend job:</strong> Python tests on ubuntu-latest</li>
+                    <li><strong>Frontend job:</strong> Flutter tests on macos-latest</li>
+                    <li><strong>E2E job:</strong> Full integration after backend + frontend pass</li>
+                </ul>
             </section>
 
             <!-- Migration Plan -->
@@ -1469,7 +2062,7 @@ class OnDailyEntry(Hook):
     </div>
     <footer>
         <p>&copy; 2026 Open Parachute, PBC. A Colorado Public Benefit Corporation.</p>
-        <p>PRD last updated: January 30, 2026</p>
+        <p>PRD last updated: February 2, 2026</p>
     </footer>
 </body>
 </html>
