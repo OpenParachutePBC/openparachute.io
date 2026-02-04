@@ -291,15 +291,21 @@
                     <li><a href="#core">Parachute Computer Core</a></li>
                     <li><a href="#manifest">Module Manifest</a></li>
                     <li><a href="#brain">Brain Module &amp; Interface System</a></li>
+                    <li><a href="#para-id">Para-ID System</a></li>
                     <li><a href="#modules">Module System</a></li>
                     <li><a href="#core-modules">Core Modules (Daily, Chat)</a></li>
+                    <li><a href="#skills-vs-modules">Skills vs Modules</a></li>
                     <li><a href="#flutter">Flutter App Architecture</a></li>
                     <li><a href="#sandboxing">Agent Sandboxing</a></li>
                     <li><a href="#chat-modes">Chat Sandbox Modes</a></li>
                     <li><a href="#bot-integration">Chat Bot Integration</a></li>
+                    <li><a href="#suggestions">Suggestions System</a></li>
+                    <li><a href="#module-permissions-ui">Module Permission UI</a></li>
+                    <li><a href="#maintenance-agent">Maintenance Agent</a></li>
                     <li><a href="#api-keys">API Key Scoping</a></li>
                     <li><a href="#communication">Inter-Module Communication</a></li>
                     <li><a href="#hooks">Hooks System</a></li>
+                    <li><a href="#observability">Observability &amp; Audit</a></li>
                     <li><a href="#auth">Claude Authentication</a></li>
                     <li><a href="#testing">Testing Strategy</a></li>
                     <li><a href="#migration">Migration Plan</a></li>
@@ -932,6 +938,64 @@ Open & interoperable extended mind technology.
                 </table>
             </section>
 
+            <!-- Para-ID System -->
+            <section class="docs-section" id="para-id">
+                <h2>Para-ID System</h2>
+                <p>Para-IDs are stable UUIDs that enable cross-module references. Each ID is prefixed with its source module, making it clear where data lives while allowing portable references across the system.</p>
+
+                <h3>Format</h3>
+                <div class="code-block">
+                    <div class="code-header">Para-ID Examples</div>
+                    <pre><code>para:{module}:{12-char-alphanumeric}
+
+Examples:
+- para:brain:a1b2c3d4e5f6    → Brain entity (person, project, topic)
+- para:daily:x7y8z9w0v1u2    → Daily journal entry
+- para:chat:m3n4o5p6q7r8     → Chat session</code></pre>
+                </div>
+
+                <h3>Why Para-IDs Matter</h3>
+                <ul>
+                    <li><strong>Cross-module linking</strong>: Daily entry can reference a Brain entity without knowing how Brain stores it</li>
+                    <li><strong>Portable references</strong>: IDs survive if Brain switches from markdown files to a graph database</li>
+                    <li><strong>Audit trail</strong>: Easy to trace what accessed what</li>
+                    <li><strong>Stable pointers</strong>: Content can move/rename without breaking links</li>
+                </ul>
+
+                <h3>Module Responsibility</h3>
+                <p>Each module maintains its own ID → location mapping:</p>
+                <div class="code-block">
+                    <div class="code-header">Entity Store with Para-ID</div>
+                    <pre><code>class EntityStore:
+    def resolve(self, para_id: str) -> Optional[Path]:
+        """Map para_id to actual file location."""
+        # para:brain:a1b2c3d4e5f6 → Brain/entities/people/kevin.md
+        record = self.db.get(para_id)
+        return Path(record.file_path) if record else None
+
+    def create(self, entity_type: str, name: str) -> str:
+        """Create new entity, return para_id."""
+        para_id = f"para:brain:{generate_id()}"
+        file_path = f"Brain/entities/{entity_type}/{slugify(name)}.md"
+        self.db.insert(para_id=para_id, file_path=file_path)
+        return para_id</code></pre>
+                </div>
+
+                <h3>Cross-Module References</h3>
+                <p>When Daily mentions a Brain entity, the <code>[[Kevin]]</code> syntax is resolved at runtime via Brain's <code>resolve()</code> function, and the para_id is stored in frontmatter for stable linking:</p>
+                <div class="code-block">
+                    <div class="code-header">Daily Entry with Para-ID References</div>
+                    <pre><code># Daily/entries/2024-01-15-morning.md
+---
+mentions:
+  - para:brain:a1b2c3d4e5f6  # Kevin
+  - para:brain:b2c3d4e5f6g7  # LVB project
+---
+
+Had a great call with [[Kevin]] about [[Learn Vibe Build]]...</code></pre>
+                </div>
+            </section>
+
             <!-- Module System -->
             <section class="docs-section" id="modules">
                 <h2>Module System</h2>
@@ -1129,6 +1193,87 @@ class TelegramBotModule(Module):
             f"Answer this question: {message['text']}"
         )
         return {"reply": response}</code></pre>
+                </div>
+            </section>
+
+            <!-- Skills vs Modules -->
+            <section class="docs-section" id="skills-vs-modules">
+                <h2>Skills vs Modules</h2>
+                <p>Skills and modules serve different purposes. Understanding the distinction prevents confusion about where functionality should live.</p>
+
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Aspect</th>
+                            <th>Modules</th>
+                            <th>Skills</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>What they are</strong></td>
+                            <td>Python packages extending Parachute</td>
+                            <td>Claude Code agent skills (markdown instructions)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Language</strong></td>
+                            <td>Python</td>
+                            <td>Markdown</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Runs where</strong></td>
+                            <td>Server process</td>
+                            <td>Inside agent sandbox</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Provides</strong></td>
+                            <td>Endpoints, MCPs, interfaces</td>
+                            <td>Agent instructions</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Installed via</strong></td>
+                            <td><code>parachute modules install</code></td>
+                            <td>Copy to skills folder</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Trust level</strong></td>
+                            <td>Fully trusted (main process)</td>
+                            <td>Runs in agent's sandbox</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Where they live</strong></td>
+                            <td><code>~/.modules/</code></td>
+                            <td><code>~/Parachute/.claude/skills/</code> or <code>{project}/.claude/skills/</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>How They Interact</h3>
+                <p>Modules control which skills agents can access:</p>
+                <div class="code-block">
+                    <div class="code-header">Agent Config with Skills Access</div>
+                    <pre><code>agents = {
+    "workspace": AgentConfig(
+        sandbox=SandboxConfig(
+            workspace_access="rw",
+            allowed_paths=["${CWD}"],
+        ),
+        # Agent can use workspace-level skills
+        allow_workspace_skills=True,
+        # Agent can use user-level skills
+        allow_user_skills=True,
+    ),
+    "restricted": AgentConfig(
+        sandbox=SandboxConfig(workspace_access="none"),
+        # No access to any skills
+        allow_workspace_skills=False,
+        allow_user_skills=False,
+    ),
+}</code></pre>
+                </div>
+
+                <div class="callout callout-info">
+                    <strong>Example:</strong> The Remotion video rendering skill lives in <code>~/Parachute/.claude/skills/remotion.md</code>, not as a module. It's just agent instructions for using the Remotion CLI. If Remotion needed server-side infrastructure (like a render queue), that would be a module.
                 </div>
             </section>
 
@@ -1792,6 +1937,238 @@ Use available interfaces (Brain, Journal) to access information.
                 </div>
             </section>
 
+            <!-- Suggestions System -->
+            <section class="docs-section" id="suggestions">
+                <h2>Suggestions System</h2>
+                <p>Sandboxed agents can propose changes rather than executing them directly. This creates a trust-building loop where users (or orchestrator agents) approve suggestions before they take effect.</p>
+
+                <h3>Why Suggestions?</h3>
+                <ul>
+                    <li><strong>Safety</strong>: Sandboxed agents can't accidentally damage data</li>
+                    <li><strong>Trust building</strong>: Log of approved/rejected suggestions helps calibrate agent behavior</li>
+                    <li><strong>User control</strong>: Clear approval points for sensitive operations</li>
+                    <li><strong>Orchestration</strong>: Parent agents can filter/combine child agent suggestions</li>
+                </ul>
+
+                <h3>Suggestion Hierarchy</h3>
+                <div class="code-block">
+                    <div class="code-header">Suggestion Flow</div>
+                    <pre><code>Sandboxed Agent
+     │
+     │ suggests: "Update Kevin entity with new project"
+     ↓
+Orchestrator Agent (optional)
+     │
+     │ filters/batches suggestions
+     │ suggests: "3 entity updates from today's journal"
+     ↓
+User
+     │
+     │ reviews and approves/rejects
+     ↓
+Action Executed</code></pre>
+                </div>
+
+                <h3>Suggestion Data Structure</h3>
+                <div class="code-block">
+                    <div class="code-header">Suggestion Dataclass</div>
+                    <pre><code>@dataclass
+class Suggestion:
+    id: str
+    source_agent: str           # Which agent proposed this
+    source_session: str         # Which session it came from
+    timestamp: datetime
+
+    # What's being suggested
+    action: str                 # "create" | "update" | "delete" | "link"
+    target_module: str          # "brain" | "daily" | "chat"
+    target_id: Optional[str]    # para_id if updating existing
+
+    # The actual change
+    payload: dict               # Module-specific data
+    reasoning: str              # Why the agent thinks this is good
+
+    # Resolution
+    status: str                 # "pending" | "approved" | "rejected" | "modified"
+    resolved_by: Optional[str]  # "user" | "orchestrator:{id}"
+    resolved_at: Optional[datetime]
+    modifications: Optional[dict]  # If user tweaked the suggestion</code></pre>
+                </div>
+
+                <h3>User Approval UI</h3>
+                <div class="code-block">
+                    <div class="code-header">Pending Suggestions View</div>
+                    <pre><code>┌─────────────────────────────────────────────────────────────────┐
+│ Pending Suggestions (3)                                         │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ 📝 Update: Kevin                                   [Brain]  │ │
+│ │                                                             │ │
+│ │ Add to "Recent Activity":                                   │ │
+│ │ "- 2024-01-15: Discussed LVB curriculum with Aaron"         │ │
+│ │                                                             │ │
+│ │ Source: Daily reflection • 2 min ago                        │ │
+│ │                                                             │ │
+│ │              [Reject]  [Edit]  [Approve ✓]                  │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ ✨ Create: AI Safety (topic)                       [Brain]  │ │
+│ │                                                             │ │
+│ │ "Emerging area of interest based on journal mentions"       │ │
+│ │                                                             │ │
+│ │ Source: Daily reflection • 2 min ago                        │ │
+│ │                                                             │ │
+│ │              [Reject]  [Edit]  [Approve ✓]                  │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│                              [Approve All]  [Review Later]      │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+                </div>
+
+                <div class="callout callout-info">
+                    <strong>Training Loop:</strong> Every suggestion and its resolution is logged. This enables future improvements where agents learn which suggestions get approved vs rejected, improving suggestion quality over time.
+                </div>
+            </section>
+
+            <!-- Module Permission UI -->
+            <section class="docs-section" id="module-permissions-ui">
+                <h2>Module Permission UI</h2>
+                <p>When installing or managing modules, users see clear permission screens similar to OAuth consent flows.</p>
+
+                <h3>Installation Flow</h3>
+                <div class="code-block">
+                    <div class="code-header">Module Installation Screen</div>
+                    <pre><code>┌─────────────────────────────────────────────────────────────────┐
+│ Install Module: parachute-contacts                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ 📇 Contacts Module                                    v1.0.0    │
+│ by OpenParachutePBC                                             │
+│                                                                 │
+│ Sync and manage your contacts with AI-powered enrichment.       │
+│                                                                 │
+│ ─── This module requests access to: ─────────────────────────── │
+│                                                                 │
+│ ✓ Create folder: Contacts/                                      │
+│ ✓ Read/Write: Contacts/**                                       │
+│ ✓ Read: Brain/** (to link contacts to entities)                 │
+│                                                                 │
+│ ─── Agents this module can run: ─────────────────────────────── │
+│                                                                 │
+│ • contact_enricher                                              │
+│   - Network access: Yes (to fetch public info)                  │
+│   - File access: Contacts/ only                                 │
+│   - Can suggest: Brain entity updates                           │
+│                                                                 │
+│ • contact_sync                                                  │
+│   - Network access: Yes (CardDAV servers)                       │
+│   - File access: Contacts/ only                                 │
+│                                                                 │
+│ ─── MCP tools provided: ─────────────────────────────────────── │
+│                                                                 │
+│ • contacts_search - Search contacts by name/email               │
+│ • contacts_get - Get contact details                            │
+│ • contacts_suggest_link - Suggest Brain entity link             │
+│                                                                 │
+│            [Cancel]              [Install & Approve]            │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+                </div>
+
+                <h3>Module Management View</h3>
+                <div class="code-block">
+                    <div class="code-header">Installed Modules Screen</div>
+                    <pre><code>┌─────────────────────────────────────────────────────────────────┐
+│ Installed Modules                                               │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ 🧠 Brain                                    v1.2.0  ✓ Active │ │
+│ │ Knowledge layer with entity management                      │ │
+│ │                                                             │ │
+│ │ Permissions: Read/Write Brain/**, MCP: brain_*              │ │
+│ │ Agents: indexer (sandboxed), linker (sandboxed)             │ │
+│ │                                                             │ │
+│ │                        [Permissions]  [Disable]  [Remove]   │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ 📔 Daily                                    v1.0.0  ✓ Active │ │
+│ │ Voice journaling and reflection                             │ │
+│ │                                                             │ │
+│ │ Permissions: Read/Write Daily/**, Read Brain/**             │ │
+│ │ Agents: reflection (sandboxed)                              │ │
+│ │                                                             │ │
+│ │                        [Permissions]  [Disable]  [Remove]   │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│                                          [+ Install Module]     │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+                </div>
+            </section>
+
+            <!-- Maintenance Agent -->
+            <section class="docs-section" id="maintenance-agent">
+                <h2>Maintenance Agent</h2>
+                <p>A special agent configuration for system administration tasks. It has broad local access but restricted network access, preventing accidental data exfiltration while allowing powerful local operations.</p>
+
+                <h3>Purpose</h3>
+                <ul>
+                    <li>Fix configuration issues</li>
+                    <li>Manage modules</li>
+                    <li>Debug problems</li>
+                    <li>Update settings</li>
+                    <li>Clean up data</li>
+                </ul>
+
+                <h3>Configuration</h3>
+                <div class="code-block">
+                    <div class="code-header">Maintenance Agent Config</div>
+                    <pre><code>agents = {
+    "maintenance": AgentConfig(
+        description="System maintenance with local-only access",
+        sandbox=SandboxConfig(
+            workspace_access="rw",
+            allowed_paths=[
+                ".parachute/",      # Config files
+                ".modules/",        # Module code (read for debugging)
+                "Chat/",            # Can fix chat data
+                "Daily/",           # Can fix daily data
+                "Brain/",           # Can fix brain data
+            ],
+            network="none",         # NO network access - can't exfiltrate
+            memory="1g",
+            cpus=2.0,
+        ),
+        capabilities=["Read", "Write", "Edit", "Bash"],
+        system_prompt="prompts/maintenance.md",
+        # Extra safety: require explicit user invocation
+        requires_explicit_invocation=True,
+    ),
+}</code></pre>
+                </div>
+
+                <h3>Invocation</h3>
+                <p>The maintenance agent is invoked explicitly, not as a default mode:</p>
+                <div class="code-block">
+                    <div class="code-header">Using Maintenance Agent</div>
+                    <pre><code># In chat
+User: /maintenance
+System: Starting maintenance agent (local access only, no network)...
+
+User: Why aren't my daily entries syncing?
+Agent: Let me check the Daily module configuration and recent logs...
+
+# Via CLI
+parachute maintenance "Check why brain search is slow"</code></pre>
+                </div>
+
+                <div class="callout callout-info">
+                    <strong>Key Safety Feature:</strong> Network is completely disabled for the maintenance agent. It can see everything locally but cannot send data anywhere external, preventing accidental data exfiltration.
+                </div>
+            </section>
+
             <!-- API Key Scoping -->
             <section class="docs-section" id="api-keys">
                 <h2>API Key Scoping</h2>
@@ -2013,6 +2390,104 @@ recent_chats = await chat_module.get_sessions(topic="LVB")</code></pre>
 
                 <div class="callout callout-info">
                     <strong>vs. Curator:</strong> Hooks are user-configurable and event-driven. The current curator approach becomes a default hook that users can modify or replace.
+                </div>
+            </section>
+
+            <!-- Observability & Audit -->
+            <section class="docs-section" id="observability">
+                <h2>Observability &amp; Audit</h2>
+                <p>Track what's calling what across the system. This builds trust and enables debugging.</p>
+
+                <h3>Event Log</h3>
+                <p>Every significant action is logged:</p>
+                <div class="code-block">
+                    <div class="code-header">Audit Event Structure</div>
+                    <pre><code>@dataclass
+class AuditEvent:
+    timestamp: datetime
+    event_type: str          # "api_call" | "mcp_call" | "module_call" | "agent_start" | "suggestion"
+
+    # Source
+    source_type: str         # "flutter_app" | "api_key" | "agent" | "module" | "hook"
+    source_id: str           # Session ID, API key name, agent ID, etc.
+
+    # Target
+    target_module: str
+    target_endpoint: str     # "/api/brain/search" or "brain.resolve()"
+
+    # Details
+    para_ids_involved: list[str]  # Any para_ids referenced
+    duration_ms: int
+    success: bool
+    error: Optional[str]</code></pre>
+                </div>
+
+                <h3>Storage</h3>
+                <div class="code-block">
+                    <div class="code-header">Audit Log Location</div>
+                    <pre><code>~/Parachute/.parachute/
+└── audit/
+    ├── 2024-01-15.jsonl    # One file per day
+    ├── 2024-01-16.jsonl
+    └── ...</code></pre>
+                </div>
+
+                <h3>Benefits</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Benefit</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Debugging</strong></td>
+                            <td>"Why did this agent access that file?"</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Trust</strong></td>
+                            <td>Users can see exactly what's happening</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Performance</strong></td>
+                            <td>Identify slow endpoints or excessive calls</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Security</strong></td>
+                            <td>Detect unusual access patterns</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Visualization (Future)</h3>
+                <p>A knowledge graph view showing module interactions:</p>
+                <div class="code-block">
+                    <div class="code-header">System Activity Graph</div>
+                    <pre><code>┌─────────────────────────────────────────────────────────────────┐
+│ System Activity (Last 24h)                                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│         ┌─────────┐                                             │
+│         │  Daily  │                                             │
+│         └────┬────┘                                             │
+│              │ 47 calls                                         │
+│              ↓                                                  │
+│         ┌─────────┐         ┌─────────┐                        │
+│         │  Brain  │ ←────── │  Chat   │                        │
+│         └─────────┘ 156     └─────────┘                        │
+│              ↑              calls                               │
+│              │ 12 calls                                         │
+│         ┌────┴────┐                                             │
+│         │ Flutter │                                             │
+│         │   App   │                                             │
+│         └─────────┘                                             │
+│                                                                 │
+│ Recent: brain.search("Kevin") → 3 results (23ms)                │
+│         daily.create_entry() → para:daily:x7y8z9 (156ms)        │
+│         chat.send_message() → streaming (2.3s)                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
                 </div>
             </section>
 
