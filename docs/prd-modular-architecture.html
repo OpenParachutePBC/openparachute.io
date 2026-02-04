@@ -296,6 +296,7 @@
                     <li><a href="#flutter">Flutter App Architecture</a></li>
                     <li><a href="#sandboxing">Agent Sandboxing</a></li>
                     <li><a href="#chat-modes">Chat Sandbox Modes</a></li>
+                    <li><a href="#bot-integration">Chat Bot Integration</a></li>
                     <li><a href="#api-keys">API Key Scoping</a></li>
                     <li><a href="#communication">Inter-Module Communication</a></li>
                     <li><a href="#hooks">Hooks System</a></li>
@@ -1536,6 +1537,259 @@ WORKDIR /workspace</code></pre>
                         </tr>
                     </tbody>
                 </table>
+            </section>
+
+            <!-- Chat Bot Integration -->
+            <section class="docs-section" id="bot-integration">
+                <h2>Chat Bot Integration</h2>
+                <p>The Chat module supports direct integration with external messaging platforms (Telegram, Discord), enabling conversations that can be viewed and managed from both the bot interface and the Parachute UI.</p>
+
+                <h3>Concept</h3>
+                <p>A Parachute session can be <strong>linked</strong> to an external bot conversation:</p>
+                <ul>
+                    <li>One Parachute session = one Telegram DM, one Discord channel, or one group chat</li>
+                    <li>Messages flow through Parachute, which orchestrates Claude responses</li>
+                    <li>The bot is a lightweight interface; Parachute is the source of truth</li>
+                    <li>Users can "zoom into" any bot conversation in the Chat UI to see full thinking context</li>
+                </ul>
+
+                <div class="code-block">
+                    <div class="code-header">Architecture Flow</div>
+                    <pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                         Parachute                               │
+│  ┌─────────────┐     ┌──────────────┐     ┌──────────────────┐ │
+│  │ Chat Session │ ←→ │ Claude Agent │ ←→ │ Brain/Journal    │ │
+│  │   (SQLite)   │     │  (sandboxed) │     │   Interfaces     │ │
+│  └──────┬──────┘     └──────────────┘     └──────────────────┘ │
+│         │                                                       │
+│         │ linked_bot: telegram:123456                           │
+│         ↓                                                       │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │                    Bot Connectors                         │  │
+│  │  ┌────────────┐  ┌─────────────┐  ┌────────────────────┐ │  │
+│  │  │  Telegram  │  │   Discord   │  │  Future: Slack...  │ │  │
+│  │  └────────────┘  └─────────────┘  └────────────────────┘ │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+                </div>
+
+                <h3>Session Linking</h3>
+                <p>Each chat session can optionally be linked to an external bot chat:</p>
+
+                <div class="code-block">
+                    <div class="code-header">Session Metadata (SQLite)</div>
+                    <pre><code>session:
+  id: "abc123"
+  title: "Project Discussion"
+  linked_bot:
+    platform: "telegram"        # telegram | discord
+    chat_id: "123456789"        # Platform-specific chat ID
+    chat_type: "dm"             # dm | group
+    linked_at: "2024-01-15T10:30:00Z"</code></pre>
+                </div>
+
+                <h3>Bot Connector Architecture</h3>
+                <p>Each platform has a connector that receives messages, finds/creates the linked Parachute session, passes the message to the Chat module, and sends Claude's response back through the platform.</p>
+
+                <div class="code-block">
+                    <div class="code-header">Telegram Connector Example</div>
+                    <pre><code>class TelegramConnector:
+    """Bridges Telegram messages to Parachute sessions."""
+
+    async def on_message(self, update: TelegramUpdate):
+        chat_id = update.message.chat.id
+
+        # Find or create linked session
+        session = await self.session_service.get_by_bot_link(
+            platform="telegram",
+            chat_id=str(chat_id)
+        )
+        if not session:
+            session = await self.session_service.create(
+                title=f"Telegram: {update.message.chat.title or 'DM'}",
+                linked_bot={
+                    "platform": "telegram",
+                    "chat_id": str(chat_id),
+                    "chat_type": "group" if update.message.chat.type != "private" else "dm"
+                }
+            )
+
+        # Process through Chat module (respects session permissions)
+        response = await self.chat_module.send_message(
+            session_id=session.id,
+            content=update.message.text,
+            source="telegram"
+        )
+
+        # Send response back to Telegram
+        await self.bot.send_message(
+            chat_id=chat_id,
+            text=response.content
+        )</code></pre>
+                </div>
+
+                <h3>Per-Session Permissions</h3>
+                <p>Each session has its own permission configuration, critical for bot-linked sessions where different chats need different access levels:</p>
+
+                <div class="code-block">
+                    <div class="code-header">Session Permissions Dataclass</div>
+                    <pre><code>@dataclass
+class SessionPermissions:
+    """Per-session access control."""
+
+    # Folder access (paths within vault the agent can see)
+    allowed_folders: list[str] = field(default_factory=list)
+    # e.g., ["Projects/parachute/", "Brain/"]
+
+    # MCP tools this session can use
+    allowed_mcps: list[str] | None = None  # None = all, [] = none
+    # e.g., ["brain_search", "brain_resolve"]
+
+    # Agent capabilities
+    capabilities: list[str] = field(default_factory=lambda: ["Read"])
+    # e.g., ["Read", "Write", "Edit", "Bash"]
+
+    # Sandbox config override (if None, uses mode default)
+    sandbox_override: SandboxConfig | None = None</code></pre>
+                </div>
+
+                <h3>System Prompt Awareness</h3>
+                <p>The agent's system prompt is dynamically constructed to include its permissions context, so it "knows" what folders, tools, and capabilities it has access to. Permissions are enforced at both prompt level AND sandbox level—the agent literally cannot exceed its configured boundaries.</p>
+
+                <div class="code-block">
+                    <div class="code-header">System Prompt Builder</div>
+                    <pre><code>def build_system_prompt(session: Session, mode: str) -> str:
+    """Compose system prompt with permission awareness."""
+
+    base_prompt = load_prompt(f"prompts/{mode}.md")
+
+    # Add folder access context
+    if session.permissions.allowed_folders:
+        folder_context = f"""
+## Folder Access
+
+You have access to the following folders in the vault:
+{chr(10).join(f'- {f}' for f in session.permissions.allowed_folders)}
+
+You cannot access files outside these folders.
+"""
+    else:
+        folder_context = """
+## Folder Access
+
+You do not have direct filesystem access in this session.
+Use available interfaces (Brain, Journal) to access information.
+"""
+
+    return f"{base_prompt}\n\n{folder_context}"</code></pre>
+                </div>
+
+                <h3>Configuration UI</h3>
+                <p>In the Chat app, users can configure per-session permissions:</p>
+
+                <div class="code-block">
+                    <div class="code-header">Session Permissions UI</div>
+                    <pre><code>┌─────────────────────────────────────────────────────────────────┐
+│ Session: Project Discussion                                     │
+│ Linked: Telegram DM (@username)                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ Mode: [Workspace ▼]                                             │
+│                                                                 │
+│ ─── Folder Access ───────────────────────────────────────────── │
+│ [✓] Projects/parachute/                                         │
+│ [✓] Brain/                                                      │
+│ [ ] Daily/                                                      │
+│ [ ] Full vault access                                           │
+│                                                                 │
+│ ─── MCP Tools ───────────────────────────────────────────────── │
+│ [✓] brain_search                                                │
+│ [✓] brain_resolve                                               │
+│ [ ] web_fetch                                                   │
+│ [ ] All tools                                                   │
+│                                                                 │
+│ ─── Capabilities ────────────────────────────────────────────── │
+│ [✓] Read files                                                  │
+│ [✓] Write files                                                 │
+│ [✓] Edit files                                                  │
+│ [ ] Run commands (Bash)                                         │
+│                                                                 │
+│                              [Save Permissions]                 │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+                </div>
+
+                <h3>Bot Setup (Settings)</h3>
+                <p>Global bot configuration in the Settings screen:</p>
+
+                <div class="code-block">
+                    <div class="code-header">Bot Settings UI</div>
+                    <pre><code>┌─────────────────────────────────────────────────────────────────┐
+│ Bot Integrations                                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ ─── Telegram ────────────────────────────────────────────────── │
+│ Status: ● Connected                                             │
+│ Bot: @MyParachuteBot                                            │
+│ Token: ••••••••••••••••••••                    [Edit] [Remove]  │
+│                                                                 │
+│ ─── Discord ─────────────────────────────────────────────────── │
+│ Status: ○ Not configured                                        │
+│                                               [Add Discord Bot] │
+│                                                                 │
+│ ─── Default Permissions for New Bot Sessions ────────────────── │
+│ Mode: [Default ▼]                                               │
+│ Folder Access: [None - use interfaces only]                     │
+│ MCP Tools: [Brain tools only]                                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+                </div>
+
+                <h3>Use Cases</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Use Case</th>
+                            <th>Description</th>
+                            <th>Permissions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Personal Assistant via Telegram</strong></td>
+                            <td>DM your bot for quick queries, see full context in Parachute later</td>
+                            <td>Default mode, Brain interfaces only</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Project Channel</strong></td>
+                            <td>Link a Discord channel to a workspace-mode session</td>
+                            <td>Workspace mode, project folder access</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Shared Family Bot</strong></td>
+                            <td>Group chat with restricted permissions</td>
+                            <td>Default mode, read-only Brain access</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ClawdBot-Style Setup</strong></td>
+                            <td>Full-featured bot with thinking visible in Parachute UI</td>
+                            <td>Workspace/Trusted mode, full access</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>MVP Scope</h3>
+                <ul>
+                    <li>Telegram connector (single bot token in settings)</li>
+                    <li>Session linking (one session = one chat)</li>
+                    <li>Per-session folder access configuration</li>
+                    <li>Per-session MCP tool filtering</li>
+                    <li>Settings UI for bot configuration</li>
+                    <li>Session permissions UI in chat detail view</li>
+                </ul>
+
+                <div class="callout callout-info">
+                    <strong>Future:</strong> Discord connector, Slack connector, multiple bot tokens per platform, session merging (combine bot + direct chats).
+                </div>
             </section>
 
             <!-- API Key Scoping -->
