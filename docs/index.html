@@ -39,12 +39,12 @@
             </div>
             <div class="sidebar-section">
                 <h3>Computer (Python)</h3>
-                <a href="base-overview.html">Overview</a>
-                <a href="base-api.html">API Routes</a>
-                <a href="base-orchestrator.html">Orchestrator</a>
-                <a href="base-agents.html">Modules & Agents</a>
-                <a href="base-database.html">Database</a>
-                <a href="base-connectors.html">Bot Connectors</a>
+                <a href="computer-overview.html">Overview</a>
+                <a href="computer-api.html">API Routes</a>
+                <a href="computer-orchestrator.html">Orchestrator</a>
+                <a href="computer-agents.html">Modules & Agents</a>
+                <a href="computer-database.html">Database</a>
+                <a href="computer-connectors.html">Bot Connectors</a>
             </div>
             <div class="sidebar-section">
                 <h3>Reference</h3>
@@ -170,7 +170,7 @@
                         <div class="concept-icon">🖥️</div>
                         <h3>Computer (Python)</h3>
                         <p>AI orchestration server running FastAPI. Manages agent execution with trust levels, session persistence, Claude SDK integration, module loading, and bot connectors.</p>
-                        <a href="base-overview.html" class="concept-link">Learn more →</a>
+                        <a href="computer-overview.html" class="concept-link">Learn more →</a>
                     </div>
 
                     <div class="concept-card">
@@ -184,28 +184,28 @@
                         <div class="concept-icon">🔒</div>
                         <h3>Trust Levels</h3>
                         <p>Three-tier security model: <code>full</code> (unrestricted), <code>vault</code> (directory-restricted), <code>sandboxed</code> (Docker container). Per-session enforcement with workspace-level floors.</p>
-                        <a href="base-orchestrator.html" class="concept-link">Learn more →</a>
+                        <a href="computer-orchestrator.html" class="concept-link">Learn more →</a>
                     </div>
 
                     <div class="concept-card">
                         <div class="concept-icon">🔄</div>
                         <h3>Pointer Architecture</h3>
                         <p>Session metadata lives in SQLite, actual transcripts in SDK JSONL files. Database is a pointer layer, not source of truth for messages.</p>
-                        <a href="base-database.html" class="concept-link">Learn more →</a>
+                        <a href="computer-database.html" class="concept-link">Learn more →</a>
                     </div>
 
                     <div class="concept-card">
                         <div class="concept-icon">🤖</div>
                         <h3>Bot Connectors</h3>
                         <p>Telegram and Discord bots bridge external messaging to Parachute sessions. Per-platform trust levels, streaming responses, group history injection, and user pairing/approval.</p>
-                        <a href="base-connectors.html" class="concept-link">Learn more →</a>
+                        <a href="computer-connectors.html" class="concept-link">Learn more →</a>
                     </div>
 
                     <div class="concept-card">
                         <div class="concept-icon">🧩</div>
                         <h3>Module System</h3>
                         <p>Brain, Chat, and Daily are loadable modules with manifest.yaml, hash verification, and approval workflow. Bundled in modules/ and deployed to vault/.modules/.</p>
-                        <a href="base-agents.html" class="concept-link">Learn more →</a>
+                        <a href="computer-agents.html" class="concept-link">Learn more →</a>
                     </div>
 
                     <div class="concept-card">
@@ -219,7 +219,7 @@
                         <div class="concept-icon">🏗️</div>
                         <h3>Workspaces</h3>
                         <p>Organize sessions into workspaces with directory scoping and trust level floors. Each workspace maps to a vault subdirectory with its own working context.</p>
-                        <a href="base-api.html" class="concept-link">Learn more →</a>
+                        <a href="computer-api.html" class="concept-link">Learn more →</a>
                     </div>
                 </div>
             </section>
@@ -341,7 +341,7 @@ cd app && flutter run -d macos</code></pre>
                         <h3>📱 App Deep Dive</h3>
                         <p>247 files, 78K lines. Explore the Flutter architecture, state management, and feature implementations.</p>
                     </a>
-                    <a href="base-overview.html" class="nav-card">
+                    <a href="computer-overview.html" class="nav-card">
                         <h3>🖥️ Computer Deep Dive</h3>
                         <p>81 files, 23K lines. Explore the FastAPI routes, orchestrator, modules, and Claude SDK integration.</p>
                     </a>
@@ -349,7 +349,7 @@ cd app && flutter run -d macos</code></pre>
                         <h3>🔄 Data Flow</h3>
                         <p>How data moves between app, server, and vault. Streaming, sessions, and sync.</p>
                     </a>
-                    <a href="base-connectors.html" class="nav-card">
+                    <a href="computer-connectors.html" class="nav-card">
                         <h3>🤖 Bot Connectors</h3>
                         <p>Telegram and Discord integration: streaming, trust levels, group history, and user pairing.</p>
                     </a>

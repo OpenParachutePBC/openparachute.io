@@ -39,12 +39,12 @@
             </div>
             <div class="sidebar-section">
                 <h3>Computer (Python)</h3>
-                <a href="base-overview.html" class="active">Overview</a>
-                <a href="base-api.html">API Routes</a>
-                <a href="base-orchestrator.html">Orchestrator</a>
-                <a href="base-agents.html">Modules & Agents</a>
-                <a href="base-database.html">Database</a>
-                <a href="base-connectors.html">Bot Connectors</a>
+                <a href="computer-overview.html" class="active">Overview</a>
+                <a href="computer-api.html">API Routes</a>
+                <a href="computer-orchestrator.html">Orchestrator</a>
+                <a href="computer-agents.html">Modules & Agents</a>
+                <a href="computer-database.html">Database</a>
+                <a href="computer-connectors.html">Bot Connectors</a>
             </div>
             <div class="sidebar-section">
                 <h3>Reference</h3>
@@ -250,42 +250,42 @@ parachute/
                         <div class="concept-icon">🎭</div>
                         <h3>Orchestrator</h3>
                         <p>Central agent controller. Routes requests through trust-level enforcement, builds context, manages SDK/sandbox execution, and streams SSE events.</p>
-                        <a href="base-orchestrator.html" class="concept-link">Learn more →</a>
+                        <a href="computer-orchestrator.html" class="concept-link">Learn more →</a>
                     </div>
 
                     <div class="concept-card">
                         <div class="concept-icon">🧩</div>
                         <h3>Module Loader</h3>
                         <p>Discovers modules from vault/.modules/, verifies SHA-256 hashes, registers API routes. Modules: brain (search), chat, daily.</p>
-                        <a href="base-agents.html" class="concept-link">Learn more →</a>
+                        <a href="computer-agents.html" class="concept-link">Learn more →</a>
                     </div>
 
                     <div class="concept-card">
                         <div class="concept-icon">🔒</div>
                         <h3>Trust Levels</h3>
                         <p>Three tiers: full (unrestricted), vault (directory-restricted), sandboxed (Docker). Enforced per-session with workspace-level floors.</p>
-                        <a href="base-orchestrator.html" class="concept-link">Learn more →</a>
+                        <a href="computer-orchestrator.html" class="concept-link">Learn more →</a>
                     </div>
 
                     <div class="concept-card">
                         <div class="concept-icon">📊</div>
                         <h3>Session Manager</h3>
                         <p>CRUD for SQLite session metadata. Maps SDK session IDs to database records. Handles working directory and context tracking.</p>
-                        <a href="base-database.html" class="concept-link">Learn more →</a>
+                        <a href="computer-database.html" class="concept-link">Learn more →</a>
                     </div>
 
                     <div class="concept-card">
                         <div class="concept-icon">🤖</div>
                         <h3>Bot Connectors</h3>
                         <p>Telegram and Discord bridges. Streaming responses, ack reactions, group history injection, user pairing/approval, per-chat settings.</p>
-                        <a href="base-connectors.html" class="concept-link">Learn more →</a>
+                        <a href="computer-connectors.html" class="concept-link">Learn more →</a>
                     </div>
 
                     <div class="concept-card">
                         <div class="concept-icon">🐳</div>
                         <h3>Docker Sandbox</h3>
                         <p>Container-based isolation for sandboxed sessions. Each execution runs in a fresh container with vault mounted read-only.</p>
-                        <a href="base-orchestrator.html#sandbox" class="concept-link">Learn more →</a>
+                        <a href="computer-orchestrator.html#sandbox" class="concept-link">Learn more →</a>
                     </div>
                 </div>
             </section>
@@ -524,11 +524,11 @@ VAULT_PATH=./vault uvicorn parachute.server:app --port 3333</code></pre>
             <section class="docs-section">
                 <h2>Next Steps</h2>
                 <div class="nav-cards">
-                    <a href="base-api.html" class="nav-card">
+                    <a href="computer-api.html" class="nav-card">
                         <h3>🔌 API Routes</h3>
                         <p>Explore all ~90 endpoints across 19 route files: chat, sessions, bots, workspaces, and more.</p>
                     </a>
-                    <a href="base-orchestrator.html" class="nav-card">
+                    <a href="computer-orchestrator.html" class="nav-card">
                         <h3>🎭 Orchestrator</h3>
                         <p>Deep dive into the agent controller, trust levels, sandbox routing, and SDK integration.</p>
                     </a>

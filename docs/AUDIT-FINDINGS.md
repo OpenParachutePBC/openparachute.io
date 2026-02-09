@@ -37,7 +37,7 @@ The server-side curator system was completely removed but heavily documented acr
 All pages updated with consistent sidebar including new Bot Connectors page.
 
 ### New Pages Added (prior session)
-- `base-connectors.html` — Bot Connectors documentation
+- `computer-connectors.html` — Bot Connectors documentation
 
 ---
 
@@ -104,7 +104,7 @@ The vision/OCR service files flagged in the original issues page are still stub 
 
 ### 9. Doc Page Filenames
 
-The server documentation pages are still named `base-*.html` (e.g., `base-overview.html`, `base-api.html`). For consistency with the "Computer" rename, these could be renamed to `computer-*.html`. This would require updating all cross-links across all pages. Low priority but would complete the terminology migration.
+The server documentation pages are still named `base-*.html` (e.g., `computer-overview.html`, `computer-api.html`). For consistency with the "Computer" rename, these could be renamed to `computer-*.html`. This would require updating all cross-links across all pages. Low priority but would complete the terminology migration.
 
 ### 10. No Search Functionality
 
@@ -128,11 +128,11 @@ The docs site uses a fixed sidebar layout. On narrow screens the sidebar may ove
 | `app-daily.html` | Updated | Daily curator → generic agent system |
 | `app-vault.html` | Updated | Terminology (3 occurrences) |
 | `app-services.html` | Updated | Terminology |
-| `base-overview.html` | Updated | (prior session) |
-| `base-api.html` | Updated | (prior session) |
-| `base-orchestrator.html` | Updated | (prior session) |
-| `base-agents.html` | Updated | (prior session) |
-| `base-database.html` | Updated | (prior session) |
-| `base-connectors.html` | Created | New page for bot connectors |
+| `computer-overview.html` | Updated | (prior session) |
+| `computer-api.html` | Updated | (prior session) |
+| `computer-orchestrator.html` | Updated | (prior session) |
+| `computer-agents.html` | Updated | (prior session) |
+| `computer-database.html` | Updated | (prior session) |
+| `computer-connectors.html` | Created | New page for bot connectors |
 | `issues.html` | Updated | Removed curator issue, fixed paths, updated stats |
 | `file-manifest.html` | Updated | Stats, removed dead entries, added new files |
