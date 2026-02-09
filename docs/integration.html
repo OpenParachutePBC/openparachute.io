@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Integration | Parachute Documentation</title>
-    <meta name="description" content="How the Parachute app and base server integrate">
+    <meta name="description" content="How the Parachute app and Computer server integrate">
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="docs.css">
 </head>
@@ -38,16 +38,13 @@
                 <a href="app-services.html">Services</a>
             </div>
             <div class="sidebar-section">
-                <h3>Base (Python)</h3>
+                <h3>Computer (Python)</h3>
                 <a href="base-overview.html">Overview</a>
                 <a href="base-api.html">API Routes</a>
                 <a href="base-orchestrator.html">Orchestrator</a>
-                <a href="base-agents.html">Agents</a>
+                <a href="base-agents.html">Modules &amp; Agents</a>
                 <a href="base-database.html">Database</a>
-            </div>
-            <div class="sidebar-section">
-                <h3>Planning</h3>
-                <a href="prd-modular-architecture.html">PRD: Modular Architecture</a>
+                <a href="base-connectors.html">Bot Connectors</a>
             </div>
             <div class="sidebar-section">
                 <h3>Reference</h3>
@@ -63,7 +60,7 @@
             </div>
 
             <h1>Integration</h1>
-            <p class="lead">How the Flutter app and Python base server connect: API contracts, authentication, communication patterns, and deployment modes.</p>
+            <p class="lead">How the Flutter app and Parachute Computer server connect: API contracts, authentication, communication patterns, and deployment modes.</p>
 
             <!-- Communication Overview -->
             <section class="docs-section">
@@ -93,7 +90,7 @@
                                                                          │
                                                                          │
                                           ┌──────────────────────────────▼────┐
-                                          │        BASE SERVER               │
+                                          │      COMPUTER SERVER             │
                                           │     http://localhost:3333        │
                                           │                                  │
                                           │  ┌───────────────────────────┐  │
@@ -119,7 +116,7 @@
                     <thead>
                         <tr>
                             <th>App Service</th>
-                            <th>Base Endpoint</th>
+                            <th>Server Endpoint</th>
                             <th>Protocol</th>
                             <th>Purpose</th>
                         </tr>
@@ -172,7 +169,7 @@
                 <div class="architecture-visual">
                     <pre>
 ┌─────────────────┐                              ┌─────────────────┐
-│       App       │                              │      Base       │
+│       App       │                              │   Computer      │
 └────────┬────────┘                              └────────┬────────┘
          │                                                │
          │ 1. First launch (no API key)                   │
@@ -365,7 +362,7 @@
 
     <footer>
         <p>&copy; 2026 Open Parachute, PBC. A Colorado Public Benefit Corporation.</p>
-        <p>Documentation last updated: January 28, 2026</p>
+        <p>Documentation last updated: February 9, 2026</p>
     </footer>
 </body>
 </html>

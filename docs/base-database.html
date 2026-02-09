@@ -35,16 +35,13 @@
                 <a href="app-services.html">Services</a>
             </div>
             <div class="sidebar-section">
-                <h3>Base (Python)</h3>
+                <h3>Computer (Python)</h3>
                 <a href="base-overview.html">Overview</a>
                 <a href="base-api.html">API Routes</a>
                 <a href="base-orchestrator.html">Orchestrator</a>
-                <a href="base-agents.html">Agents</a>
+                <a href="base-agents.html">Modules &amp; Agents</a>
                 <a href="base-database.html" class="active">Database</a>
-            </div>
-            <div class="sidebar-section">
-                <h3>Planning</h3>
-                <a href="prd-modular-architecture.html">PRD: Modular Architecture</a>
+                <a href="base-connectors.html">Bot Connectors</a>
             </div>
             <div class="sidebar-section">
                 <h3>Reference</h3>
@@ -57,14 +54,14 @@
                 <a href="../index.html">Home</a> / <a href="index.html">Docs</a> / <span>Database</span>
             </div>
             <h1>Database Layer</h1>
-            <p class="lead">SQLite database for session metadata, tags, RAG indexing, and curator task queue. Uses async operations via aiosqlite with schema migrations support.</p>
+            <p class="lead">SQLite database for session metadata, tags, RAG indexing, and bot connector pairing. Uses async operations via aiosqlite with schema migrations support. 8 active tables with pointer architecture — sessions.db stores metadata only, SDK JSONL files are the source of truth for messages.</p>
 
             <!-- Architecture Diagram -->
             <section class="docs-section">
                 <h2>Architecture Overview</h2>
                 <pre class="code-block">
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         Database Layer                                   │
+│                         Database Layer (8 tables)                        │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  ┌────────────────────────────────────────────────────────────────────┐ │
@@ -75,7 +72,7 @@
 │  │  └──────────────┘  └──────────────┘  └───────────────────────┘   │ │
 │  │         │                                                         │ │
 │  │         │ SDK JSONL files are source of truth for messages        │ │
-│  │         ▼ (~/.claude/projects/{vault}/sessions/)                  │ │
+│  │         ▼ ({vault}/.claude/projects/{encoded-cwd}/)               │ │
 │  └────────────────────────────────────────────────────────────────────┘ │
 │                                                                          │
 │  ┌────────────────────────────────────────────────────────────────────┐ │
@@ -87,15 +84,14 @@
 │  └────────────────────────────────────────────────────────────────────┘ │
 │                                                                          │
 │  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │                      Curator Tables                                │ │
-│  │  ┌───────────────────┐  ┌────────────────────────────────────┐   │ │
-│  │  │ curator_sessions  │  │          curator_queue             │   │ │
-│  │  │ (companion state) │  │  (FIFO task queue for processing)  │   │ │
-│  │  └───────────────────┘  └────────────────────────────────────┘   │ │
+│  │                      Bot Connector Tables                          │ │
+│  │  ┌──────────────────────────────────────────────────────────────┐ │ │
+│  │  │ pairing_requests (user approval flow for Telegram/Discord)  │ │ │
+│  │  └──────────────────────────────────────────────────────────────┘ │ │
 │  └────────────────────────────────────────────────────────────────────┘ │
 │                                                                          │
 │  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │  schema_version (v10) - Migration tracking                         │ │
+│  │  schema_version (v10+) - Migration tracking                        │ │
 │  └────────────────────────────────────────────────────────────────────┘ │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -130,9 +126,9 @@
                             <td>SSE event models for streaming</td>
                         </tr>
                         <tr>
-                            <td><code>parachute/core/curator_service.py</code></td>
-                            <td>~1058</td>
-                            <td>CuratorService using database task queue</td>
+                            <td><code>parachute/connectors/base.py</code></td>
+                            <td>~600</td>
+                            <td>Bot connector base with pairing request operations</td>
                         </tr>
                     </tbody>
                 </table>
@@ -293,53 +289,70 @@ CREATE TABLE IF NOT EXISTS index_manifest (
                 </table>
             </section>
 
-            <!-- Curator Tables -->
+            <!-- Pairing Requests Table -->
             <section class="docs-section">
-                <h2>Curator Tables</h2>
-                <p>Dedicated tables for curator state to avoid blocking main chat processing.</p>
+                <h2>Pairing Requests Table</h2>
+                <p>Tracks user approval flow for bot connectors (Telegram, Discord). When an unknown user messages the bot, a pairing request is created for the admin to approve or deny.</p>
 
-                <h3>Curator Sessions Table</h3>
                 <pre class="code-block">
-CREATE TABLE IF NOT EXISTS curator_sessions (
-    id TEXT PRIMARY KEY,               -- Unique curator session ID
-    parent_session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
-    sdk_session_id TEXT,               -- SDK session ID for persistence/resume
-    last_run_at TEXT,                  -- ISO 8601 timestamp of last execution
-    last_message_index INTEGER DEFAULT 0,  -- Track position in parent session
-    context_files TEXT,                -- JSON: files loaded for context
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-</pre>
-
-                <h3>Curator Queue Table</h3>
-                <pre class="code-block">
-CREATE TABLE IF NOT EXISTS curator_queue (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,  -- Auto-incrementing task ID
-    parent_session_id TEXT NOT NULL,       -- Reference to chat session
-    curator_session_id TEXT REFERENCES curator_sessions(id),
-    trigger_type TEXT NOT NULL,            -- 'message_done', 'manual', 'timer'
-    message_count INTEGER,                 -- Messages in parent session
-    queued_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    started_at TEXT,                       -- When processing began
-    completed_at TEXT,                     -- When processing finished
-    status TEXT DEFAULT 'pending',         -- pending -> running -> completed/failed
-    result TEXT,                           -- JSON: {title_updated, logged, actions}
-    error TEXT,                            -- Error message if failed
-    tool_calls TEXT                        -- JSON: list of tools called by curator
+CREATE TABLE IF NOT EXISTS pairing_requests (
+    id TEXT PRIMARY KEY,                               -- UUID
+    platform TEXT NOT NULL,                            -- 'telegram' or 'discord'
+    platform_user_id TEXT NOT NULL,                    -- Platform-specific user ID
+    platform_user_display TEXT,                        -- Display name at time of request
+    platform_chat_id TEXT NOT NULL,                    -- Chat/channel ID
+    status TEXT NOT NULL DEFAULT 'pending',            -- pending → approved/denied
+    approved_trust_level TEXT,                         -- Trust level if approved
+    created_at TEXT NOT NULL,                          -- ISO 8601
+    resolved_at TEXT,                                  -- When approved/denied
+    resolved_by TEXT,                                  -- Who resolved (admin)
+    UNIQUE(platform, platform_user_id, status)         -- One pending per user per platform
 );
 
-CREATE INDEX IF NOT EXISTS idx_curator_queue_status ON curator_queue(status);
-CREATE INDEX IF NOT EXISTS idx_curator_queue_parent ON curator_queue(parent_session_id);
+CREATE INDEX IF NOT EXISTS idx_pairing_requests_status ON pairing_requests(status);
+CREATE INDEX IF NOT EXISTS idx_pairing_requests_platform ON pairing_requests(platform, platform_user_id);
 </pre>
+
+                <h3>Pairing Request Operations</h3>
+                <table class="docs-table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>upsert_pairing_request(request)</code></td>
+                            <td>Create or update a pairing request</td>
+                        </tr>
+                        <tr>
+                            <td><code>get_pending_pairing_requests()</code></td>
+                            <td>List all pending requests (for admin UI)</td>
+                        </tr>
+                        <tr>
+                            <td><code>get_pairing_request(id)</code></td>
+                            <td>Get single request by ID</td>
+                        </tr>
+                        <tr>
+                            <td><code>get_pairing_by_platform_user(platform, user_id)</code></td>
+                            <td>Find approved pairing for a platform user</td>
+                        </tr>
+                        <tr>
+                            <td><code>resolve_pairing_request(id, status, trust_level)</code></td>
+                            <td>Approve or deny a pairing request</td>
+                        </tr>
+                    </tbody>
+                </table>
 
                 <div class="callout callout-info">
-                    <strong>Task Queue Workflow:</strong>
+                    <strong>Pairing Flow:</strong>
                     <ol>
-                        <li>New message triggers <code>queue_task()</code> with status='pending'</li>
-                        <li>Worker loop picks up oldest pending task (FIFO)</li>
-                        <li>Status set to 'running', curator agent executes</li>
-                        <li>On completion: status='completed', result stored</li>
-                        <li>On error: status='failed', error message saved</li>
+                        <li>Unknown user sends message to bot on Telegram/Discord</li>
+                        <li>Bot connector creates pairing request with status='pending'</li>
+                        <li>Admin approves/denies via app Settings or API (<code>POST /api/bots/pairing/{id}/approve</code>)</li>
+                        <li>On approval, user is added to allowlist with specified trust level</li>
+                        <li>Subsequent messages from that user are processed normally</li>
                     </ol>
                 </div>
             </section>
@@ -613,9 +626,14 @@ VALUES (10, datetime('now'));
                             <td>Filter sessions by agent type</td>
                         </tr>
                         <tr>
-                            <td>v10+</td>
-                            <td><code>ALTER TABLE curator_queue ADD COLUMN tool_calls TEXT</code></td>
-                            <td>Store tool names curator uses for debugging</td>
+                            <td>v11</td>
+                            <td>Removed <code>curator_sessions</code> and <code>curator_queue</code> tables</td>
+                            <td>Curator system replaced by modular architecture</td>
+                        </tr>
+                        <tr>
+                            <td>v12</td>
+                            <td><code>CREATE TABLE pairing_requests</code></td>
+                            <td>Bot connector user approval flow (Telegram/Discord)</td>
                         </tr>
                     </tbody>
                 </table>
@@ -782,15 +800,15 @@ if perms.can_read('Projects/parachute'):
                     <li><strong>Soft deletes:</strong> Archive flag instead of hard delete for audit trail</li>
                     <li><strong>Cascading deletes:</strong> Foreign key constraints clean up related records</li>
                     <li><strong>Pointer architecture:</strong> Session DB contains metadata only; SDK stores actual messages in JSONL files</li>
-                    <li><strong>Curator separation:</strong> Dedicated tables for curator state to avoid blocking main chat processing</li>
+                    <li><strong>Bot pairing isolation:</strong> Dedicated table for pairing requests separate from session metadata</li>
                 </ul>
             </section>
 
             <!-- Navigation -->
             <div class="nav-cards">
                 <a href="base-agents.html" class="nav-card">
-                    <h3>Agents</h3>
-                    <p>Custom agents, curator, and daily pipelines.</p>
+                    <h3>Modules &amp; Agents</h3>
+                    <p>Module system, custom agents, and daily pipelines.</p>
                 </a>
                 <a href="base-api.html" class="nav-card">
                     <h3>API Routes</h3>

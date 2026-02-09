@@ -38,16 +38,13 @@
                 <a href="app-services.html">Services</a>
             </div>
             <div class="sidebar-section">
-                <h3>Base (Python)</h3>
+                <h3>Computer (Python)</h3>
                 <a href="base-overview.html">Overview</a>
                 <a href="base-api.html">API Routes</a>
                 <a href="base-orchestrator.html">Orchestrator</a>
-                <a href="base-agents.html">Agents</a>
+                <a href="base-agents.html">Modules &amp; Agents</a>
                 <a href="base-database.html">Database</a>
-            </div>
-            <div class="sidebar-section">
-                <h3>Planning</h3>
-                <a href="prd-modular-architecture.html">PRD: Modular Architecture</a>
+                <a href="base-connectors.html">Bot Connectors</a>
             </div>
             <div class="sidebar-section">
                 <h3>Reference</h3>
@@ -72,7 +69,7 @@
                     <div class="stat-label">Critical Issues</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number" style="color: #ffb347;">8</div>
+                    <div class="stat-number" style="color: #ffb347;">7</div>
                     <div class="stat-label">High Priority</div>
                 </div>
                 <div class="stat-card">
@@ -138,7 +135,7 @@
                             <span class="issue-title">HOME Override Race Condition</span>
                             <span class="issue-severity critical">Critical</span>
                         </div>
-                        <div class="issue-location">base/parachute/core/claude_sdk.py:24</div>
+                        <div class="issue-location">computer/parachute/core/claude_sdk.py:24</div>
                         <div class="issue-description">
                             The <code>_override_home</code> context manager sets <code>os.environ['HOME']</code> temporarily. If an exception occurs, HOME may not be properly restored, affecting subsequent operations.
                             <br><br>
@@ -152,7 +149,7 @@
                             <span class="issue-title">.env Files in Attachment Whitelist</span>
                             <span class="issue-severity critical">Critical</span>
                         </div>
-                        <div class="issue-location">base/parachute/models/requests.py:11</div>
+                        <div class="issue-location">computer/parachute/models/requests.py:11</div>
                         <div class="issue-description">
                             The <code>ALLOWED_ATTACHMENT_EXTENSIONS</code> whitelist includes <code>.env</code>, <code>.ini</code>, <code>.conf</code>, and <code>.cfg</code> files. Users could accidentally upload credentials.
                             <br><br>
@@ -199,24 +196,10 @@
 
                     <div class="issue-card">
                         <div class="issue-header">
-                            <span class="issue-title">Curator Task Queue Unbounded</span>
-                            <span class="issue-severity high">High</span>
-                        </div>
-                        <div class="issue-location">base/parachute/core/curator_service.py</div>
-                        <div class="issue-description">
-                            The curator task queue has no size limit. If message processing is slower than arrival rate, tasks accumulate indefinitely, consuming memory.
-                            <br><br>
-                            <strong>Impact:</strong> Memory leak under high message volume.<br>
-                            <strong>Fix:</strong> Add max_queue_size and implement eviction policy (e.g., drop oldest).
-                        </div>
-                    </div>
-
-                    <div class="issue-card">
-                        <div class="issue-header">
                             <span class="issue-title">Attachment Save Fails Silently</span>
                             <span class="issue-severity high">High</span>
                         </div>
-                        <div class="issue-location">base/parachute/core/orchestrator.py:340</div>
+                        <div class="issue-location">computer/parachute/core/orchestrator.py:340</div>
                         <div class="issue-description">
                             When attachment saving fails, error is logged but message still sent. Client doesn't know attachment failed - just sees "[Failed to attach: filename]" in message.
                             <br><br>
@@ -230,7 +213,7 @@
                             <span class="issue-title">Permission System Desync Risk</span>
                             <span class="issue-severity high">High</span>
                         </div>
-                        <div class="issue-location">base/parachute/models/session.py + core/permission_handler.py</div>
+                        <div class="issue-location">computer/parachute/models/session.py + core/permission_handler.py</div>
                         <div class="issue-description">
                             Two separate permission systems: <code>SessionPermissions</code> (for UI) and <code>PermissionHandler</code> (for enforcement). Could show different allowed vs actual permissions.
                             <br><br>
@@ -294,7 +277,7 @@
                             <span class="issue-title">Orphaned Pending Sessions</span>
                             <span class="issue-severity medium">Medium</span>
                         </div>
-                        <div class="issue-location">base/parachute/core/session_manager.py</div>
+                        <div class="issue-location">computer/parachute/core/session_manager.py</div>
                         <div class="issue-description">
                             Sessions start as "pending" until SDK returns ID. If SDK error occurs, session stays pending forever. No cleanup job for old pending sessions.
                             <br><br>
@@ -307,7 +290,7 @@
                             <span class="issue-title">MCP Server Python Path Not Validated</span>
                             <span class="issue-severity medium">Medium</span>
                         </div>
-                        <div class="issue-location">base/parachute/lib/mcp_loader.py:54</div>
+                        <div class="issue-location">computer/parachute/lib/mcp_loader.py:54</div>
                         <div class="issue-description">
                             MCP server config hardcodes Python command without validating it exists. Could fail silently if venv not activated.
                             <br><br>
@@ -320,7 +303,7 @@
                             <span class="issue-title">Error Event Inconsistency</span>
                             <span class="issue-severity medium">Medium</span>
                         </div>
-                        <div class="issue-location">base/parachute/api/chat.py + orchestrator.py</div>
+                        <div class="issue-location">computer/parachute/api/chat.py + orchestrator.py</div>
                         <div class="issue-description">
                             Some errors yield ErrorEvent, some return JSONResponse with 401, some raise HTTPException. Client can't uniformly handle errors.
                             <br><br>
@@ -385,7 +368,7 @@
                             <span class="issue-title">Missing Database Indexes</span>
                             <span class="issue-severity medium">Medium</span>
                         </div>
-                        <div class="issue-location">base/parachute/db/database.py</div>
+                        <div class="issue-location">computer/parachute/db/database.py</div>
                         <div class="issue-description">
                             No explicit indexes on frequently queried columns (e.g., session_tags.tag, sessions.archived). Could slow down as data grows.
                             <br><br>
@@ -398,7 +381,7 @@
                             <span class="issue-title">Large Orchestrator Function</span>
                             <span class="issue-severity medium">Medium</span>
                         </div>
-                        <div class="issue-location">base/parachute/core/orchestrator.py:189-450</div>
+                        <div class="issue-location">computer/parachute/core/orchestrator.py:189-450</div>
                         <div class="issue-description">
                             The run_streaming method is ~260 lines. Mixes session setup, prompt building, attachment handling, and streaming. Hard to test individual pieces.
                             <br><br>
@@ -441,7 +424,7 @@
                             <span class="issue-title">TODOs in Base Codebase</span>
                             <span class="issue-severity low">Low</span>
                         </div>
-                        <div class="issue-location">base/parachute/ (multiple files)</div>
+                        <div class="issue-location">computer/parachute/ (multiple files)</div>
                         <div class="issue-description">
                             4 TODO comments found:
                             <ul>
@@ -520,7 +503,7 @@
                     <li><strong>Add atomic write support</strong> for journal entries (write to temp, then rename)</li>
                     <li><strong>Remove sensitive extensions</strong> from attachment whitelist</li>
                     <li><strong>Fix HOME override</strong> race condition in claude_sdk.py</li>
-                    <li><strong>Add curator queue limits</strong> to prevent memory leak</li>
+                    <li><strong>Add bot connector error recovery</strong> for dropped connections</li>
                 </ol>
 
                 <h3>Top Architectural Improvements</h3>
@@ -534,11 +517,11 @@
 
                 <h3>Technical Debt Summary</h3>
                 <ul>
-                    <li>73,015 lines of Dart code across 190 files</li>
+                    <li>78,240 lines of Dart code across 247 files</li>
                     <li>13 state notifiers with scattered logic</li>
                     <li>2,059-line ChatService (should be split)</li>
                     <li>Multiple copy-paste service implementations</li>
-                    <li>4 TODOs in base, various stubs in app</li>
+                    <li>4 TODOs in computer server, various stubs in app</li>
                 </ul>
             </section>
         </main>
@@ -546,7 +529,7 @@
 
     <footer>
         <p>&copy; 2026 Open Parachute, PBC. A Colorado Public Benefit Corporation.</p>
-        <p>Documentation last updated: January 28, 2026</p>
+        <p>Documentation last updated: February 9, 2026</p>
     </footer>
 </body>
 </html>

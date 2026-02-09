@@ -35,16 +35,13 @@
                 <a href="app-services.html">Services</a>
             </div>
             <div class="sidebar-section">
-                <h3>Base (Python)</h3>
+                <h3>Computer (Python)</h3>
                 <a href="base-overview.html">Overview</a>
                 <a href="base-api.html">API Routes</a>
                 <a href="base-orchestrator.html">Orchestrator</a>
-                <a href="base-agents.html">Agents</a>
+                <a href="base-agents.html">Modules &amp; Agents</a>
                 <a href="base-database.html">Database</a>
-            </div>
-            <div class="sidebar-section">
-                <h3>Planning</h3>
-                <a href="prd-modular-architecture.html">PRD: Modular Architecture</a>
+                <a href="base-connectors.html">Bot Connectors</a>
             </div>
             <div class="sidebar-section">
                 <h3>Reference</h3>
@@ -61,7 +58,7 @@
 
             <section class="docs-section">
                 <h2>Architecture Overview</h2>
-                <p>The Vault feature operates in two modes: <strong>local</strong> (direct filesystem access) and <strong>remote</strong> (via Base server API). The system automatically selects the appropriate mode based on server connectivity.</p>
+                <p>The Vault feature operates in two modes: <strong>local</strong> (direct filesystem access) and <strong>remote</strong> (via Computer server API). The system automatically selects the appropriate mode based on server connectivity.</p>
 
                 <div class="code-block">
                     <pre>
@@ -229,7 +226,7 @@ Text:    txt, log, env, gitignore, dockerignore, editorconfig</pre>
 
             <section class="docs-section">
                 <h2>Remote File Browser Service</h2>
-                <p>Handles file operations via the Base server API:</p>
+                <p>Handles file operations via the Computer server API:</p>
 
                 <h3>API Endpoints</h3>
                 <table>
@@ -450,7 +447,7 @@ VaultBrowserScreen
                         <tr>
                             <td>Source</td>
                             <td>Filesystem</td>
-                            <td>Base server API</td>
+                            <td>Computer server API</td>
                         </tr>
                         <tr>
                             <td>Path Type</td>

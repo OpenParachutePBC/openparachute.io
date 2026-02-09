@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Base Overview | Parachute Documentation</title>
-    <meta name="description" content="Deep dive into the Parachute Python/FastAPI base server architecture">
+    <title>Computer Overview | Parachute Documentation</title>
+    <meta name="description" content="Deep dive into the Parachute Computer Python/FastAPI server architecture">
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="docs.css">
 </head>
@@ -38,16 +38,13 @@
                 <a href="app-services.html">Services</a>
             </div>
             <div class="sidebar-section">
-                <h3>Base (Python)</h3>
+                <h3>Computer (Python)</h3>
                 <a href="base-overview.html" class="active">Overview</a>
                 <a href="base-api.html">API Routes</a>
                 <a href="base-orchestrator.html">Orchestrator</a>
-                <a href="base-agents.html">Agents</a>
+                <a href="base-agents.html">Modules & Agents</a>
                 <a href="base-database.html">Database</a>
-            </div>
-            <div class="sidebar-section">
-                <h3>Planning</h3>
-                <a href="prd-modular-architecture.html">PRD: Modular Architecture</a>
+                <a href="base-connectors.html">Bot Connectors</a>
             </div>
             <div class="sidebar-section">
                 <h3>Reference</h3>
@@ -59,29 +56,29 @@
         <!-- Main Content -->
         <main class="docs-content">
             <div class="breadcrumb">
-                <a href="../index.html">Home</a> / <a href="index.html">Docs</a> / <span>Base Overview</span>
+                <a href="../index.html">Home</a> / <a href="index.html">Docs</a> / <span>Computer Overview</span>
             </div>
 
-            <h1>Base (Python) Overview</h1>
-            <p class="lead">AI orchestration server built with FastAPI. Manages agent execution, session persistence, Claude SDK integration, and multi-agent pipelines for journal curation.</p>
+            <h1>Computer (Python) Overview</h1>
+            <p class="lead">AI orchestration server built with FastAPI. Manages agent execution with trust-level enforcement, session persistence, Claude SDK integration, modular architecture, and bot connectors for Telegram and Discord.</p>
 
             <!-- Stats -->
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-number">66</div>
+                    <div class="stat-number">81</div>
                     <div class="stat-label">Python Files</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">18</div>
+                    <div class="stat-number">~90</div>
                     <div class="stat-label">API Endpoints</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">10</div>
+                    <div class="stat-number">8</div>
                     <div class="stat-label">DB Tables</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">17</div>
-                    <div class="stat-label">Route Modules</div>
+                    <div class="stat-number">19</div>
+                    <div class="stat-label">Route Files</div>
                 </div>
             </div>
 
@@ -92,46 +89,87 @@
                 <div class="architecture-visual">
                     <pre>
 parachute/
-├── api/                   # FastAPI route handlers (17 files)
-│   ├── auth.py           # API key management
-│   ├── chat.py           # Streaming chat endpoint
-│   ├── sessions.py       # Session CRUD
-│   ├── curator.py        # Curator introspection
-│   ├── scheduler.py      # Daily agent scheduling
-│   ├── health.py         # Health check
-│   ├── modules.py        # Module prompts
-│   ├── filesystem.py     # File operations
-│   └── ...
-├── core/                  # Business logic (14 files)
-│   ├── orchestrator.py   # Central agent controller (~450 lines)
-│   ├── session_manager.py # Session persistence
-│   ├── claude_sdk.py     # SDK wrapper
-│   ├── curator_service.py # Background curator
-│   ├── daily_curator.py  # Morning reflection
-│   ├── daily_agent.py    # Generic daily agents
-│   ├── agents.py         # Agent discovery
-│   ├── skills.py         # Skill plugins
-│   ├── scheduler.py      # APScheduler wrapper
-│   └── permission_handler.py
-├── db/                    # SQLite database layer
-│   └── database.py       # aiosqlite + schema
-├── lib/                   # Utilities (10 files)
-│   ├── agent_loader.py   # Load from markdown
-│   ├── context_loader.py # Format context
-│   ├── mcp_loader.py     # MCP server config
-│   ├── auth.py           # API key generation
-│   ├── server_config.py  # Auth modes
-│   └── ...
-├── models/                # Pydantic models
-│   ├── session.py
-│   ├── requests.py
-│   ├── agent.py
-│   └── events.py
-├── hooks/                 # Activity tracking
-│   └── activity_hook.py
-├── config.py              # Environment settings
-├── server.py              # FastAPI app + lifespan
-└── mcp_server.py          # MCP protocol server
+├── api/                       # FastAPI route handlers (19 files)
+│   ├── auth.py               # API key management
+│   ├── bots.py               # Bot connector management
+│   ├── chat.py               # Streaming chat endpoint
+│   ├── claude_code.py        # Claude Code integration
+│   ├── context_folders.py    # Context folder management
+│   ├── filesystem.py         # File operations
+│   ├── health.py             # Health check
+│   ├── hooks.py              # Event hook management
+│   ├── imports.py            # Data import endpoints
+│   ├── mcp.py                # MCP server management
+│   ├── modules.py            # Module prompts and config
+│   ├── prompts.py            # Prompt management
+│   ├── sandbox.py            # Docker sandbox management
+│   ├── scheduler.py          # Agent scheduling
+│   ├── sessions.py           # Session CRUD + config
+│   ├── skills.py             # Skill plugins
+│   ├── sync.py               # Cross-device sync
+│   ├── usage.py              # Usage tracking
+│   └── workspaces.py         # Workspace management
+├── connectors/                # Bot platform connectors
+│   ├── base.py               # Abstract BotConnector base class
+│   ├── telegram.py           # Telegram bot (streaming, voice, groups)
+│   ├── discord_bot.py        # Discord bot (slash commands, groups)
+│   ├── config.py             # Bot config from bots.yaml
+│   └── message_formatter.py  # Claude → platform formatting
+├── core/                      # Business logic
+│   ├── orchestrator.py       # Central agent controller
+│   ├── orchestrator_tools.py # Tool definitions for orchestrator
+│   ├── session_manager.py    # Session persistence
+│   ├── claude_sdk.py         # SDK wrapper
+│   ├── claude_usage.py       # Token usage tracking
+│   ├── module_loader.py      # Module discovery + hash verification
+│   ├── sandbox.py            # Docker container execution
+│   ├── agents.py             # Agent discovery
+│   ├── skills.py             # Skill plugins
+│   ├── scheduler.py          # APScheduler wrapper
+│   ├── permission_handler.py # Permission grants/denies
+│   ├── capability_filter.py  # Trust-level capability filtering
+│   ├── workspaces.py         # Workspace logic
+│   ├── context_folders.py    # Context folder logic
+│   ├── context_parser.py     # Context parsing
+│   ├── chat_log.py           # Chat log utilities
+│   ├── daily_agent.py        # Daily agent execution
+│   ├── daily_agent_tools.py  # Daily agent tool definitions
+│   ├── import_service.py     # Data import logic
+│   ├── interfaces.py         # Abstract interfaces
+│   └── hooks/                # Event hook system
+│       ├── runner.py         # Hook discovery + execution
+│       ├── events.py         # Event type definitions
+│       └── models.py         # Hook data models
+├── db/                        # SQLite database layer
+│   └── database.py           # aiosqlite + schema (8 tables)
+├── docker/                    # Sandbox infrastructure
+│   ├── Dockerfile.sandbox    # Sandbox container image
+│   └── entrypoint.py         # Container entrypoint
+├── lib/                       # Utilities
+│   ├── agent_loader.py       # Load agents from markdown
+│   ├── auth.py               # API key generation
+│   ├── context_loader.py     # Format context for prompts
+│   ├── ignore_patterns.py    # .gitignore-style filtering
+│   ├── logger.py             # Logging setup
+│   ├── mcp_loader.py         # MCP server config
+│   ├── para_id.py            # Para-ID generation
+│   ├── permissions.py        # Permission utilities
+│   ├── server_config.py      # Auth modes + config
+│   ├── typed_errors.py       # Error types
+│   └── vault_utils.py        # Vault path utilities
+├── models/                    # Pydantic models
+│   ├── session.py            # Session + SessionCreate
+│   ├── requests.py           # API request models
+│   ├── agent.py              # Agent definitions
+│   ├── events.py             # SSE event types
+│   └── workspace.py          # Workspace models
+├── hooks/                     # Built-in hooks
+│   └── activity_hook.py      # Activity tracking hook
+├── config.py                  # Settings (env > .env > YAML > defaults)
+├── server.py                  # FastAPI app + lifespan
+├── cli.py                     # CLI (install/update/server/logs/doctor/config/module)
+├── daemon.py                  # Daemon management (launchd/systemd/PID)
+└── mcp_server.py              # MCP protocol server
                     </pre>
                 </div>
             </section>
@@ -148,11 +186,17 @@ parachute/
                               └────────────────┬─────────────────────┘
                                                │
                               ┌────────────────▼─────────────────────┐
+                              │     Auth Middleware                   │
+                              │  - Check auth mode (remote/always)   │
+                              │  - Validate API key or localhost     │
+                              └────────────────┬─────────────────────┘
+                                               │
+                              ┌────────────────▼─────────────────────┐
                               │          API Router                   │
                               │       api/chat.py                     │
                               │                                       │
                               │  - Validate request                   │
-                              │  - Check auth                         │
+                              │  - Resolve session + workspace        │
                               │  - Call orchestrator                  │
                               └────────────────┬─────────────────────┘
                                                │
@@ -160,44 +204,39 @@ parachute/
                               │          Orchestrator                 │
                               │    core/orchestrator.py               │
                               │                                       │
-                              │  - Load agent (or default)            │
-                              │  - Get/create session                 │
-                              │  - Build system prompt                │
-                              │  - Process attachments                │
-                              │  - Call Claude SDK                    │
+                              │  - Enforce trust level                │
+                              │  - Load module system prompt          │
+                              │  - Build context (folders, history)   │
+                              │  - Route to SDK or Docker sandbox     │
                               └────────────────┬─────────────────────┘
                                                │
-    ┌──────────────────────────────────────────┼───────────────────────────────────┐
-    │                                          │                                    │
-    ▼                                          ▼                                    ▼
-┌────────────────┐                ┌────────────────────┐               ┌────────────────────┐
-│ Session Manager│                │    Claude SDK      │               │    Permission      │
-│                │                │  core/claude_sdk.py│               │     Handler        │
-│ - Create       │                │                    │               │                    │
-│ - Update       │                │ - Override HOME    │               │ - Check grants     │
-│ - Query DB     │                │ - Stream events    │               │ - Apply denies     │
-│ - SDK mapping  │                │ - Return generator │               │ - MCP always OK    │
-└───────┬────────┘                └─────────┬──────────┘               └────────────────────┘
-        │                                   │
-        │                                   │
-        ▼                                   ▼
-┌────────────────┐                ┌────────────────────┐
-│    SQLite      │                │   Claude AI        │
-│ Chat/sessions.db│               │   (Anthropic)      │
-│                │                │                    │
-│ sessions       │                │ - Process message  │
-│ curator_queue  │                │ - Execute tools    │
-│ session_tags   │                │ - Return stream    │
-└────────────────┘                └─────────┬──────────┘
-                                            │
-                              ┌─────────────▼───────────────────────┐
-                              │        SSE Response                  │
-                              │  StreamingResponse (async gen)       │
-                              │                                      │
-                              │  data: {"type": "text", ...}         │
-                              │  data: {"type": "tool_use", ...}     │
-                              │  data: {"type": "message_stop"}      │
-                              └──────────────────────────────────────┘
+              ┌────────────────────────────────┼────────────────────────────┐
+              │                                │                            │
+              ▼                                ▼                            ▼
+┌──────────────────────┐    ┌───────────────────────┐    ┌──────────────────────┐
+│ Trust: full / vault  │    │   Trust: sandboxed     │    │   Session Manager    │
+│                      │    │                        │    │                      │
+│  Claude SDK          │    │  Docker Sandbox        │    │  - Create/update     │
+│  (direct execution)  │    │  (container isolation) │    │  - Query DB          │
+│  core/claude_sdk.py  │    │  core/sandbox.py       │    │  - SDK ID mapping    │
+└──────────┬───────────┘    └───────────┬────────────┘    └──────────────────────┘
+           │                            │
+           └──────────┬─────────────────┘
+                      │
+                      ▼
+           ┌────────────────────┐
+           │   Claude AI        │
+           │   (Anthropic)      │
+           └─────────┬──────────┘
+                     │
+       ┌─────────────▼───────────────────────┐
+       │        SSE Response                  │
+       │  StreamingResponse (async gen)       │
+       │                                      │
+       │  data: {"type": "text", ...}         │
+       │  data: {"type": "tool_use", ...}     │
+       │  data: {"type": "result", ...}       │
+       └──────────────────────────────────────┘
                     </pre>
                 </div>
             </section>
@@ -210,7 +249,21 @@ parachute/
                     <div class="concept-card">
                         <div class="concept-icon">🎭</div>
                         <h3>Orchestrator</h3>
-                        <p>Central agent controller. Manages SDK queries, session lifecycle, streaming events, and active stream tracking for abort support.</p>
+                        <p>Central agent controller. Routes requests through trust-level enforcement, builds context, manages SDK/sandbox execution, and streams SSE events.</p>
+                        <a href="base-orchestrator.html" class="concept-link">Learn more →</a>
+                    </div>
+
+                    <div class="concept-card">
+                        <div class="concept-icon">🧩</div>
+                        <h3>Module Loader</h3>
+                        <p>Discovers modules from vault/.modules/, verifies SHA-256 hashes, registers API routes. Modules: brain (search), chat, daily.</p>
+                        <a href="base-agents.html" class="concept-link">Learn more →</a>
+                    </div>
+
+                    <div class="concept-card">
+                        <div class="concept-icon">🔒</div>
+                        <h3>Trust Levels</h3>
+                        <p>Three tiers: full (unrestricted), vault (directory-restricted), sandboxed (Docker). Enforced per-session with workspace-level floors.</p>
                         <a href="base-orchestrator.html" class="concept-link">Learn more →</a>
                     </div>
 
@@ -218,87 +271,54 @@ parachute/
                         <div class="concept-icon">📊</div>
                         <h3>Session Manager</h3>
                         <p>CRUD for SQLite session metadata. Maps SDK session IDs to database records. Handles working directory and context tracking.</p>
-                        <a href="base-database.html#sessions" class="concept-link">Learn more →</a>
+                        <a href="base-database.html" class="concept-link">Learn more →</a>
                     </div>
 
                     <div class="concept-card">
                         <div class="concept-icon">🤖</div>
-                        <h3>Claude SDK</h3>
-                        <p>Wrapper around claude-agent-sdk. Overrides HOME for vault portability, yields streaming events as async generator.</p>
-                        <a href="base-orchestrator.html#sdk" class="concept-link">Learn more →</a>
+                        <h3>Bot Connectors</h3>
+                        <p>Telegram and Discord bridges. Streaming responses, ack reactions, group history injection, user pairing/approval, per-chat settings.</p>
+                        <a href="base-connectors.html" class="concept-link">Learn more →</a>
                     </div>
 
                     <div class="concept-card">
-                        <div class="concept-icon">📝</div>
-                        <h3>Curator Service</h3>
-                        <p>Background agent for title/context updates. One persistent SDK session per chat, tasks queued FIFO.</p>
-                        <a href="base-agents.html#curator" class="concept-link">Learn more →</a>
-                    </div>
-
-                    <div class="concept-card">
-                        <div class="concept-icon">☀️</div>
-                        <h3>Daily Curator</h3>
-                        <p>Morning reflection agent. Reads journals + chat logs, generates reflection, creates song (Suno) and image (Glif).</p>
-                        <a href="base-agents.html#daily-curator" class="concept-link">Learn more →</a>
-                    </div>
-
-                    <div class="concept-card">
-                        <div class="concept-icon">⏰</div>
-                        <h3>Scheduler</h3>
-                        <p>APScheduler wrapper for cron-based agent execution. Discovers agents from Daily/.agents/ and runs at configured times.</p>
-                        <a href="base-agents.html#scheduler" class="concept-link">Learn more →</a>
+                        <div class="concept-icon">🐳</div>
+                        <h3>Docker Sandbox</h3>
+                        <p>Container-based isolation for sandboxed sessions. Each execution runs in a fresh container with vault mounted read-only.</p>
+                        <a href="base-orchestrator.html#sandbox" class="concept-link">Learn more →</a>
                     </div>
                 </div>
             </section>
 
-            <!-- Server Startup -->
+            <!-- Server Lifecycle -->
             <section class="docs-section">
                 <h2>Server Lifecycle</h2>
+                <p>The lifespan manager in <code>server.py</code> initializes all services on startup:</p>
 
-                <div class="code-block">
-                    <div class="code-header">server.py - Lifespan Manager</div>
-                    <pre><code>@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan manager."""
-    settings = get_settings()
+                <ol>
+                    <li><strong>Logging</strong> &mdash; Configure from settings</li>
+                    <li><strong>Server config</strong> &mdash; Load API keys and auth settings</li>
+                    <li><strong>Database</strong> &mdash; Initialize SQLite at <code>vault/Chat/sessions.db</code></li>
+                    <li><strong>Orchestrator</strong> &mdash; Create with vault path, DB, and settings</li>
+                    <li><strong>Scheduler</strong> &mdash; APScheduler for automated agents</li>
+                    <li><strong>Module Loader</strong> &mdash; Discover, verify hashes, register routes</li>
+                    <li><strong>Hooks</strong> &mdash; Discover hook scripts in <code>vault/.parachute/hooks/</code></li>
+                    <li><strong>Bot connectors</strong> &mdash; Auto-start enabled connectors from <code>bots.yaml</code></li>
+                </ol>
 
-    # Initialization
-    setup_logging(level=settings.log_level)
-    settings.vault_path.mkdir(parents=True, exist_ok=True)
-    (settings.vault_path / ".parachute").mkdir(exist_ok=True)
-
-    # Core services
-    server_config = init_server_config(settings.vault_path)
-    db = await init_database(settings.database_path)
-    orchestrator = Orchestrator(
-        vault_path=settings.vault_path,
-        database=db,
-        settings=settings,
-    )
-
-    # Background services
-    curator = await init_curator_service(db, settings.vault_path)
-    scheduler = await init_scheduler(settings.vault_path)
-
-    # Store in app.state
-    app.state.orchestrator = orchestrator
-    app.state.database = db
-    app.state.curator = curator
-    app.state.scheduler = scheduler
-
-    yield  # Server runs here
-
-    # Shutdown
-    await stop_scheduler()
-    await stop_curator_service()
-    await close_database()</code></pre>
-                </div>
+                <p>On shutdown: stop bots, stop scheduler, close database.</p>
             </section>
 
             <!-- Authentication -->
             <section class="docs-section">
                 <h2>Authentication</h2>
-                <p>API key authentication with multiple modes:</p>
+                <p>Two layers of authentication:</p>
+
+                <h3>Claude SDK Auth</h3>
+                <p><code>CLAUDE_CODE_OAUTH_TOKEN</code> &mdash; long-lived OAuth token from <code>claude setup-token</code>. Stored at <code>vault/.parachute/.token</code>. Required for all AI chat functionality.</p>
+
+                <h3>API Key Auth</h3>
+                <p>For multi-device access to the server:</p>
 
                 <table class="docs-table">
                     <thead>
@@ -317,90 +337,92 @@ async def lifespan(app: FastAPI):
                         <tr>
                             <td><code>remote</code> (default)</td>
                             <td>Localhost bypasses, remote requires key</td>
-                            <td>Normal development</td>
+                            <td>Normal usage</td>
                         </tr>
                         <tr>
                             <td><code>always</code></td>
                             <td>All requests require valid API key</td>
-                            <td>Production / shared server</td>
+                            <td>Shared server</td>
                         </tr>
                     </tbody>
                 </table>
 
-                <div class="code-block">
-                    <div class="code-header">API Key Format</div>
-                    <pre><code># Generated keys follow this format:
-para_aBcDeFgHiJkLmNoPqRsT1234  # Full key (shown once)
-k_aBcDeFgHiJkL                 # Key ID (for reference)
-
-# Keys are SHA-256 hashed before storage:
-sha256:abc123def456...         # Stored hash</code></pre>
-                </div>
-
-                <p>Keys can be managed via:</p>
-                <ul>
-                    <li><code>POST /api/auth/keys</code> - Create new key</li>
-                    <li><code>GET /api/auth/keys</code> - List keys (hashed)</li>
-                    <li><code>DELETE /api/auth/keys/{key_id}</code> - Revoke key</li>
-                </ul>
+                <p>Keys are managed via <code>POST /api/auth/keys</code>, <code>GET /api/auth/keys</code>, <code>DELETE /api/auth/keys/{key_id}</code>. Keys are SHA-256 hashed before storage in <code>server-config.json</code>.</p>
             </section>
 
             <!-- Configuration -->
             <section class="docs-section">
                 <h2>Configuration</h2>
-                <p>All settings via environment variables:</p>
+                <p>Config precedence: env vars &gt; <code>.env</code> file &gt; <code>vault/.parachute/config.yaml</code> &gt; defaults.</p>
 
                 <table class="docs-table">
                     <thead>
                         <tr>
-                            <th>Variable</th>
+                            <th>Setting</th>
+                            <th>Env Var</th>
                             <th>Default</th>
                             <th>Description</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
+                            <td><code>vault_path</code></td>
                             <td><code>VAULT_PATH</code></td>
                             <td><code>./sample-vault</code></td>
-                            <td>Path to Parachute vault</td>
+                            <td>Path to vault directory</td>
                         </tr>
                         <tr>
+                            <td><code>port</code></td>
                             <td><code>PORT</code></td>
                             <td><code>3333</code></td>
                             <td>Server port</td>
                         </tr>
                         <tr>
+                            <td><code>host</code></td>
                             <td><code>HOST</code></td>
                             <td><code>0.0.0.0</code></td>
                             <td>Bind address</td>
                         </tr>
                         <tr>
-                            <td><code>API_KEY</code></td>
-                            <td>(none)</td>
-                            <td>Legacy single API key</td>
+                            <td><code>claude_code_oauth_token</code></td>
+                            <td><code>CLAUDE_CODE_OAUTH_TOKEN</code></td>
+                            <td>&mdash;</td>
+                            <td>OAuth token (also from <code>.token</code> file)</td>
                         </tr>
                         <tr>
-                            <td><code>CORS_ORIGINS</code></td>
-                            <td><code>*</code></td>
-                            <td>Allowed origins (comma-separated)</td>
+                            <td><code>default_model</code></td>
+                            <td><code>DEFAULT_MODEL</code></td>
+                            <td>&mdash;</td>
+                            <td>Optional model override</td>
                         </tr>
                         <tr>
+                            <td><code>auth_mode</code></td>
+                            <td><code>AUTH_MODE</code></td>
+                            <td><code>remote</code></td>
+                            <td>Auth mode: remote / always / disabled</td>
+                        </tr>
+                        <tr>
+                            <td><code>log_level</code></td>
                             <td><code>LOG_LEVEL</code></td>
                             <td><code>INFO</code></td>
                             <td>Logging verbosity</td>
                         </tr>
                         <tr>
-                            <td><code>CURATOR_MODEL</code></td>
-                            <td>(account default)</td>
-                            <td>Model for curator agent</td>
+                            <td><code>cors_origins</code></td>
+                            <td><code>CORS_ORIGINS</code></td>
+                            <td><code>*</code></td>
+                            <td>Allowed CORS origins</td>
                         </tr>
                         <tr>
+                            <td><code>debug</code></td>
                             <td><code>DEBUG</code></td>
                             <td><code>false</code></td>
                             <td>Enable debug mode</td>
                         </tr>
                     </tbody>
                 </table>
+
+                <p>Manage via CLI: <code>parachute config show</code>, <code>parachute config set KEY VAL</code>, <code>parachute config get KEY</code>.</p>
             </section>
 
             <!-- Running -->
@@ -408,48 +430,37 @@ sha256:abc123def456...         # Stored hash</code></pre>
                 <h2>Running the Server</h2>
 
                 <div class="code-block">
-                    <div class="code-header">parachute.sh Commands</div>
-                    <pre><code># Start server (uses venv, port 3333)
-./parachute.sh start
+                    <div class="code-header">CLI Commands</div>
+                    <pre><code># First-time install (venv + deps + config + daemon)
+cd computer && ./install.sh
 
-# With supervisor web UI
-./parachute.sh supervisor
+# Manage the daemon
+parachute server status       # Check if running
+parachute server stop         # Stop daemon
+parachute server restart      # Restart daemon
+parachute server -f           # Run in foreground (dev mode)
 
-# Setup (create venv, install deps)
-./parachute.sh setup
+# Logs and diagnostics
+parachute logs                # Tail daemon logs
+parachute status              # System overview
+parachute doctor              # Run diagnostics
 
-# View logs
-./parachute.sh logs
+# Module management
+parachute module list          # List modules + approval status
+parachute module approve NAME  # Approve a module (record hash)
+parachute module status        # Live module status (requires running server)
 
-# Check status
-./parachute.sh status
+# Updates
+parachute update               # Pull latest + reinstall + restart
+parachute update --local       # Reinstall + restart (skip git pull)
 
-# Stop server
-./parachute.sh stop</code></pre>
-                </div>
-
-                <p>The startup banner shows:</p>
-                <div class="code-block">
-                    <div class="code-header">Server Banner</div>
-                    <pre><code>╔═══════════════════════════════════════════════════════════════╗
-║           🪂 Parachute Base Server (Python)                   ║
-╠═══════════════════════════════════════════════════════════════╣
-║  Server:  http://0.0.0.0:3333                                 ║
-║  Vault:   /Users/you/Parachute                                ║
-╠═══════════════════════════════════════════════════════════════╣
-║  API Endpoints:                                               ║
-║    POST /api/chat             - Run agent (streaming)         ║
-║    GET  /api/chat             - List sessions                 ║
-║    GET  /api/chat/:id         - Get session                   ║
-║    DELETE /api/chat/:id       - Delete session                ║
-║    GET  /api/modules/:mod/prompt   - Get module prompt        ║
-║    PUT  /api/modules/:mod/prompt   - Update module prompt     ║
-║    GET  /api/modules/:mod/search   - Search module            ║
-╚═══════════════════════════════════════════════════════════════╝</code></pre>
+# Or run directly
+source .venv/bin/activate
+VAULT_PATH=./vault uvicorn parachute.server:app --port 3333</code></pre>
                 </div>
             </section>
 
-            <!-- Dependencies -->
+            <!-- Key Dependencies -->
             <section class="docs-section">
                 <h2>Key Dependencies</h2>
 
@@ -457,57 +468,56 @@ sha256:abc123def456...         # Stored hash</code></pre>
                     <thead>
                         <tr>
                             <th>Package</th>
-                            <th>Version</th>
                             <th>Purpose</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td><code>fastapi</code></td>
-                            <td>&gt;= 0.109.0</td>
-                            <td>Web framework</td>
+                            <td><code>fastapi</code> / <code>uvicorn</code></td>
+                            <td>Web framework + ASGI server</td>
                         </tr>
                         <tr>
-                            <td><code>uvicorn[standard]</code></td>
-                            <td>&gt;= 0.27.0</td>
-                            <td>ASGI server</td>
-                        </tr>
-                        <tr>
-                            <td><code>pydantic</code></td>
-                            <td>&gt;= 2.5.0</td>
-                            <td>Data validation</td>
+                            <td><code>pydantic</code> / <code>pydantic-settings</code></td>
+                            <td>Data validation + config management</td>
                         </tr>
                         <tr>
                             <td><code>aiosqlite</code></td>
-                            <td>&gt;= 0.19.0</td>
-                            <td>Async SQLite</td>
+                            <td>Async SQLite driver</td>
                         </tr>
                         <tr>
                             <td><code>claude-agent-sdk</code></td>
-                            <td>&gt;= 0.1.19, &lt; 0.1.22</td>
-                            <td>Claude integration</td>
+                            <td>Claude AI integration</td>
                         </tr>
                         <tr>
                             <td><code>sse-starlette</code></td>
-                            <td>&gt;= 2.0.0</td>
-                            <td>Server-Sent Events</td>
+                            <td>Server-Sent Events streaming</td>
+                        </tr>
+                        <tr>
+                            <td><code>python-telegram-bot</code></td>
+                            <td>Telegram bot connector</td>
+                        </tr>
+                        <tr>
+                            <td><code>discord.py</code></td>
+                            <td>Discord bot connector</td>
+                        </tr>
+                        <tr>
+                            <td><code>aiodocker</code></td>
+                            <td>Docker sandbox management</td>
                         </tr>
                         <tr>
                             <td><code>apscheduler</code></td>
-                            <td>&gt;= 3.10.0</td>
-                            <td>Task scheduling</td>
+                            <td>Cron-based agent scheduling</td>
                         </tr>
                         <tr>
                             <td><code>python-frontmatter</code></td>
-                            <td>&gt;= 1.1.0</td>
-                            <td>Markdown parsing</td>
+                            <td>Markdown frontmatter parsing</td>
+                        </tr>
+                        <tr>
+                            <td><code>pyyaml</code></td>
+                            <td>YAML config + module manifests</td>
                         </tr>
                     </tbody>
                 </table>
-
-                <div class="callout callout-warning">
-                    <strong>SDK Version Pin:</strong> <code>claude-agent-sdk</code> is pinned to &lt; 0.1.22 due to an <code>attach_tokens</code> bug with MCP in version 0.1.22.
-                </div>
             </section>
 
             <!-- Navigation -->
@@ -516,11 +526,11 @@ sha256:abc123def456...         # Stored hash</code></pre>
                 <div class="nav-cards">
                     <a href="base-api.html" class="nav-card">
                         <h3>🔌 API Routes</h3>
-                        <p>Explore all 18 endpoints: chat, sessions, auth, curator, scheduler, and more.</p>
+                        <p>Explore all ~90 endpoints across 19 route files: chat, sessions, bots, workspaces, and more.</p>
                     </a>
                     <a href="base-orchestrator.html" class="nav-card">
                         <h3>🎭 Orchestrator</h3>
-                        <p>Deep dive into the central agent controller and SDK integration.</p>
+                        <p>Deep dive into the agent controller, trust levels, sandbox routing, and SDK integration.</p>
                     </a>
                 </div>
             </section>
@@ -529,7 +539,7 @@ sha256:abc123def456...         # Stored hash</code></pre>
 
     <footer>
         <p>&copy; 2026 Open Parachute, PBC. A Colorado Public Benefit Corporation.</p>
-        <p>Documentation last updated: January 28, 2026</p>
+        <p>Documentation last updated: February 9, 2026</p>
     </footer>
 </body>
 </html>

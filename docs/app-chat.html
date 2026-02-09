@@ -38,16 +38,13 @@
                 <a href="app-services.html">Services</a>
             </div>
             <div class="sidebar-section">
-                <h3>Base (Python)</h3>
+                <h3>Computer (Python)</h3>
                 <a href="base-overview.html">Overview</a>
                 <a href="base-api.html">API Routes</a>
                 <a href="base-orchestrator.html">Orchestrator</a>
-                <a href="base-agents.html">Agents</a>
+                <a href="base-agents.html">Modules &amp; Agents</a>
                 <a href="base-database.html">Database</a>
-            </div>
-            <div class="sidebar-section">
-                <h3>Planning</h3>
-                <a href="prd-modular-architecture.html">PRD: Modular Architecture</a>
+                <a href="base-connectors.html">Bot Connectors</a>
             </div>
             <div class="sidebar-section">
                 <h3>Reference</h3>
@@ -101,7 +98,7 @@
 │  │ ChatMessage     │    │ BackgroundMgr   │    │ chatMessages    │    │
 │  │ StreamEvent     │    │ LocalReader     │    │ contextFiles    │    │
 │  │ SessionTranscript│   │ ImportService   │    │ usageProvider   │    │
-│  │ CuratorSession  │    │ ParaIdService   │    │ currentSession  │    │
+│  │ SystemPromptInfo│    │ ParaIdService   │    │ currentSession  │    │
 │  │ ...             │    │                 │    │                 │    │
 │  └────────┬────────┘    └────────┬────────┘    └────────┬────────┘    │
 │           │                      │                      │              │
@@ -362,7 +359,7 @@ With token counting and truncation warning</pre>
             <!-- ChatService -->
             <section class="docs-section">
                 <h2>ChatService (2,060 lines)</h2>
-                <p>The main HTTP client for base server communication.</p>
+                <p>The main HTTP client for Computer server communication.</p>
 
                 <h3>Key Methods</h3>
                 <table class="docs-table">
@@ -456,31 +453,31 @@ With token counting and truncation warning</pre>
                 </ul>
             </section>
 
-            <!-- Curator Integration -->
+            <!-- Post-Session Processing -->
             <section class="docs-section">
-                <h2>Curator Integration</h2>
+                <h2>Post-Session Processing</h2>
 
-                <p>A persistent "curator" agent runs alongside each chat session to maintain metadata:</p>
+                <p>After each chat exchange, a post-session hook handles background maintenance:</p>
 
                 <div class="architecture-visual">
                     <pre>
-Chat Session
+Chat Session Complete
      │
-     ├── Message received → Curator task queued
+     ├── Activity Hook triggers
      │
      ▼
-Curator Session (persistent)
+Post-Session Tasks
      │
-     ├── Update session title
-     ├── Write to Daily/chat-log/
-     └── Track context updates</pre>
+     ├── Update session title (first message)
+     ├── Summarize exchange to Daily/chat-log/
+     └── Track usage metrics</pre>
                 </div>
 
-                <h3>Curator Features</h3>
+                <h3>Background Tasks</h3>
                 <ul>
-                    <li><strong>Title Generation:</strong> Auto-generates descriptive titles from conversation</li>
-                    <li><strong>Chat Logging:</strong> Creates entries in <code>Daily/chat-log/{date}.md</code></li>
-                    <li><strong>Session Continuity:</strong> SDK session ID preserved for memory across runs</li>
+                    <li><strong>Title Generation:</strong> Auto-generates descriptive titles from first exchange</li>
+                    <li><strong>Chat Logging:</strong> Summarizes exchange to <code>Daily/chat-log/{date}.md</code></li>
+                    <li><strong>Metrics:</strong> Tracks token usage and session statistics</li>
                 </ul>
             </section>
 
@@ -542,7 +539,7 @@ Curator Session (persistent)
 │   ├── chat_message.dart
 │   ├── stream_event.dart
 │   ├── session_transcript.dart
-│   ├── curator_session.dart
+│   ├── system_prompt_info.dart
 │   ├── context_file.dart
 │   ├── context_folder.dart
 │   ├── agent.dart
@@ -598,7 +595,7 @@ Curator Session (persistent)
 
     <footer>
         <p>&copy; 2026 Open Parachute, PBC. A Colorado Public Benefit Corporation.</p>
-        <p>Documentation last updated: January 28, 2026</p>
+        <p>Documentation last updated: February 9, 2026</p>
     </footer>
 </body>
 </html>

@@ -35,16 +35,13 @@
                 <a href="app-services.html" class="active">Services</a>
             </div>
             <div class="sidebar-section">
-                <h3>Base (Python)</h3>
+                <h3>Computer (Python)</h3>
                 <a href="base-overview.html">Overview</a>
                 <a href="base-api.html">API Routes</a>
                 <a href="base-orchestrator.html">Orchestrator</a>
-                <a href="base-agents.html">Agents</a>
+                <a href="base-agents.html">Modules &amp; Agents</a>
                 <a href="base-database.html">Database</a>
-            </div>
-            <div class="sidebar-section">
-                <h3>Planning</h3>
-                <a href="prd-modular-architecture.html">PRD: Modular Architecture</a>
+                <a href="base-connectors.html">Bot Connectors</a>
             </div>
             <div class="sidebar-section">
                 <h3>Reference</h3>
@@ -379,7 +376,7 @@ notInitialized → initializing (lazy init) → ready
 
             <section class="docs-section">
                 <h2>LimaVMService</h2>
-                <p>Complete lifecycle management for Parachute Computer - an isolated Lima VM running the base server.</p>
+                <p>Complete lifecycle management for Parachute Computer - an isolated Lima VM running the Computer server.</p>
 
                 <h3>Lifecycle States</h3>
                 <div class="code-block">
@@ -415,7 +412,7 @@ notInstalled ──► notCreated ──► stopped ◄──► starting
                         </tr>
                         <tr>
                             <td><code>startServer()</code></td>
-                            <td>Boot base server inside VM</td>
+                            <td>Boot Computer server inside VM</td>
                         </tr>
                         <tr>
                             <td><code>isServerHealthy()</code></td>
@@ -569,7 +566,7 @@ debugPrint('[ClassName] Error reason: $e'); // Error</pre>
                     <p>File browser for exploring vault content.</p>
                 </a>
                 <a href="base-overview.html" class="nav-card">
-                    <h3>Base Server</h3>
+                    <h3>Computer Server</h3>
                     <p>Python backend powering the AI.</p>
                 </a>
             </div>

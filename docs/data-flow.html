@@ -38,16 +38,13 @@
                 <a href="app-services.html">Services</a>
             </div>
             <div class="sidebar-section">
-                <h3>Base (Python)</h3>
+                <h3>Computer (Python)</h3>
                 <a href="base-overview.html">Overview</a>
                 <a href="base-api.html">API Routes</a>
                 <a href="base-orchestrator.html">Orchestrator</a>
-                <a href="base-agents.html">Agents</a>
+                <a href="base-agents.html">Modules &amp; Agents</a>
                 <a href="base-database.html">Database</a>
-            </div>
-            <div class="sidebar-section">
-                <h3>Planning</h3>
-                <a href="prd-modular-architecture.html">PRD: Modular Architecture</a>
+                <a href="base-connectors.html">Bot Connectors</a>
             </div>
             <div class="sidebar-section">
                 <h3>Reference</h3>
@@ -176,7 +173,7 @@
 │     Server:                                                               │
 │     ├── session_manager.update() — Update DB metadata                     │
 │     ├── SDK writes to ~/.claude/projects/.../*.jsonl                      │
-│     └── Queue curator task (title/context update)                         │
+│     └── Activity hook triggers (title + summary generation)               │
 │                                                                           │
 │     App:                                                                  │
 │     ├── Update local session state                                        │
@@ -208,8 +205,8 @@
 │   │   └── 2026-01-28.md
 │   ├── .agents/                    # Custom daily agents
 │   │   └── my-agent.md
-│   └── .curator/                   # Daily curator state
-│       └── state.json
+│   └── .agents/                    # Daily agent configs
+│       └── content-scout.md
 │
 ├── Chat/                           # Chat sessions (server-managed)
 │   ├── sessions.db                 # SQLite metadata
@@ -382,7 +379,7 @@ Device A                           Server                          Device B
                     <li>SDK executes and generates session ID</li>
                     <li>SessionManager creates DB record with SDK session ID</li>
                     <li>SDK writes transcript to <code>~/.claude/projects/.../session.jsonl</code></li>
-                    <li>Curator queues title generation task</li>
+                    <li>Activity hook triggers title generation</li>
                 </ol>
 
                 <h3>Resume Session</h3>
@@ -406,56 +403,46 @@ Device A                           Server                          Device B
                 </ol>
             </section>
 
-            <!-- Curator Pipeline -->
+            <!-- Background Processing -->
             <section class="docs-section">
-                <h2>Curator Pipeline</h2>
-                <p>Background agents process content automatically:</p>
+                <h2>Background Processing</h2>
+                <p>Automated agents and hooks process content in the background:</p>
 
                 <div class="architecture-visual">
                     <pre>
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                        CURATOR SERVICE (Per-Chat)                          │
+│                    ACTIVITY HOOK (Post-Session)                              │
 │                                                                            │
-│  Triggered: After message threshold or explicit request                    │
-│  Purpose: Generate/update title, maintain session log                      │
+│  Triggered: After each chat exchange completes                             │
+│  Purpose: Generate/update title, summarize to daily chat log               │
 │                                                                            │
 │  ┌──────────────────┐      ┌──────────────────┐      ┌──────────────────┐ │
-│  │   curator_queue  │ ───▶ │  Curator Agent   │ ───▶ │  update_title()  │ │
-│  │   (FIFO, 1 at    │      │  (persistent     │      │  get_session_log │ │
-│  │    a time)       │      │   SDK session)   │      │  update_log()    │ │
+│  │  Session         │ ───▶ │  Summarizer      │ ───▶ │  update_title()  │ │
+│  │  completes       │      │  Agent           │      │  write_chat_log  │ │
+│  │                  │      │  (one-shot)      │      │  track_metrics   │ │
 │  └──────────────────┘      └──────────────────┘      └──────────────────┘ │
+│                                                                            │
+│  Output: Daily/chat-log/{date}.md                                          │
 └────────────────────────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                     DAILY CURATOR (Morning Reflection)                      │
-│                                                                            │
-│  Triggered: Scheduled (default 3 AM) or manual                             │
-│  Purpose: Morning reflection from journals + chat logs                     │
-│                                                                            │
-│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌─────────────┐ │
-│  │  Read        │   │  Generate    │   │  Create      │   │  Create     │ │
-│  │  Journals    │ → │  Reflection  │ → │  Song        │ → │  Image      │ │
-│  │  + Chat Logs │   │  (markdown)  │   │  (Suno MCP)  │   │  (Glif MCP) │ │
-│  └──────────────┘   └──────────────┘   └──────────────┘   └─────────────┘ │
-│                                                                            │
-│  Output: Daily/reflection/2026-01-28.md                                    │
-│  State:  Daily/.curator/state.json                                         │
-└────────────────────────────────────────────────────────────────────────────┘
-
-┌────────────────────────────────────────────────────────────────────────────┐
-│                      DAILY AGENTS (Configurable)                            │
+│                   DAILY AGENTS (Scheduled via APScheduler)                   │
 │                                                                            │
 │  Location: Daily/.agents/*.md                                              │
-│  Schedule: Cron from frontmatter                                           │
+│  Schedule: Time from YAML frontmatter (default 3:00 UTC)                   │
+│  Runner:   core/daily_agent.py + core/scheduler.py                         │
 │                                                                            │
 │  Example agent (content-scout.md):                                         │
 │  ---                                                                       │
-│  schedule: "0 8 * * *"   # 8 AM daily                                      │
+│  schedule: "8:00"                                                          │
+│  schedule_enabled: true                                                    │
 │  tools: [read_journal, web_search]                                         │
 │  ---                                                                       │
 │  Find relevant news and articles based on journal interests...             │
 │                                                                            │
 │  Scheduler discovers agents → Runs at scheduled times → Writes outputs     │
+│                                                                            │
+│  State: Daily/.{agent-name}/state.json (tracks last run date)              │
 └────────────────────────────────────────────────────────────────────────────┘
                     </pre>
                 </div>
@@ -553,7 +540,7 @@ data: {"type": "message_stop"}
                 <div class="nav-cards">
                     <a href="integration.html" class="nav-card">
                         <h3>🔗 Integration</h3>
-                        <p>How app and base connect: API contracts, authentication, and sync.</p>
+                        <p>How app and Computer server connect: API contracts, authentication, and sync.</p>
                     </a>
                     <a href="base-orchestrator.html" class="nav-card">
                         <h3>🎭 Orchestrator</h3>
@@ -566,7 +553,7 @@ data: {"type": "message_stop"}
 
     <footer>
         <p>&copy; 2026 Open Parachute, PBC. A Colorado Public Benefit Corporation.</p>
-        <p>Documentation last updated: January 28, 2026</p>
+        <p>Documentation last updated: February 9, 2026</p>
     </footer>
 </body>
 </html>

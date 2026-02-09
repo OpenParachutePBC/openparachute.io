@@ -35,16 +35,13 @@
                 <a href="app-services.html">Services</a>
             </div>
             <div class="sidebar-section">
-                <h3>Base (Python)</h3>
+                <h3>Computer (Python)</h3>
                 <a href="base-overview.html">Overview</a>
                 <a href="base-api.html">API Routes</a>
                 <a href="base-orchestrator.html" class="active">Orchestrator</a>
-                <a href="base-agents.html">Agents</a>
+                <a href="base-agents.html">Modules &amp; Agents</a>
                 <a href="base-database.html">Database</a>
-            </div>
-            <div class="sidebar-section">
-                <h3>Planning</h3>
-                <a href="prd-modular-architecture.html">PRD: Modular Architecture</a>
+                <a href="base-connectors.html">Bot Connectors</a>
             </div>
             <div class="sidebar-section">
                 <h3>Reference</h3>
@@ -57,7 +54,7 @@
                 <a href="../index.html">Home</a> / <a href="index.html">Docs</a> / <span>Orchestrator</span>
             </div>
             <h1>Orchestrator</h1>
-            <p class="lead">The Orchestrator is the core execution controller for the Base server, managing agent execution, session lifecycle, permission handling, and streaming responses to clients via Server-Sent Events (SSE).</p>
+            <p class="lead">The Orchestrator is the core execution controller for the Parachute Computer server, managing agent execution, session lifecycle, trust level enforcement, permission handling, and streaming responses to clients via Server-Sent Events (SSE).</p>
 
             <section class="docs-section">
                 <h2>Architecture Overview</h2>
@@ -159,7 +156,7 @@
                     <li><strong>Permission Handler:</strong> Create with session and callbacks</li>
                     <li><strong>SDK Query:</strong> Stream events from Claude Agent SDK</li>
                     <li><strong>Event Processing:</strong> Transform SDK events to SSE events</li>
-                    <li><strong>Curator Task:</strong> Queue background processing for title updates</li>
+                    <li><strong>Cleanup:</strong> Store final metrics and clean up active stream tracking</li>
                 </ol>
 
                 <h3>Event Flow</h3>
@@ -560,21 +557,27 @@ if event.type == "init" and "session_id" in event.data:
             </section>
 
             <section class="docs-section">
-                <h2>Curator Integration</h2>
-                <p>After each message completes, the orchestrator queues a curator task for background processing:</p>
+                <h2>Trust Level Enforcement</h2>
+                <p>The orchestrator enforces trust levels per-session, determining how the agent is executed:</p>
 
                 <div class="code-block">
                     <pre>
-_queue_curator_task(session_id, message_count, tool_calls)
+Trust Level Resolution:
         │
-        ├── Creates task in curator_queue table
+        ├── "full"      → Unrestricted SDK execution
+        │                  All tools available, full filesystem access
         │
-        ├── Curator agent processes asynchronously
+        ├── "vault"     → Restricted SDK execution
+        │                  Tools limited to vault directory
+        │                  Working directory must be within vault
         │
-        └── Updates session title and Daily chat-log</pre>
+        └── "sandboxed" → Docker container execution
+                           Fresh container per message
+                           Isolated filesystem (vault mounted read-only)
+                           Container destroyed after response</pre>
                 </div>
 
-                <p>The curator task is non-blocking and failures don't impact the main request.</p>
+                <p>Trust level is stored in session metadata and persists across messages. Workspace trust levels act as a floor — sessions can't be less restrictive than their workspace.</p>
             </section>
 
             <section class="docs-section">
@@ -622,11 +625,11 @@ _queue_curator_task(session_id, message_count, tool_calls)
             <div class="nav-cards">
                 <a href="base-api.html" class="nav-card">
                     <h3>API Routes</h3>
-                    <p>REST endpoints for the Base server.</p>
+                    <p>REST and streaming endpoints for the Computer server.</p>
                 </a>
                 <a href="base-agents.html" class="nav-card">
-                    <h3>Agents</h3>
-                    <p>Agent definitions and curator system.</p>
+                    <h3>Modules &amp; Agents</h3>
+                    <p>Module system, custom agents, and daily pipelines.</p>
                 </a>
             </div>
         </main>

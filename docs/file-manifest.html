@@ -35,16 +35,13 @@
                 <a href="app-services.html">Services</a>
             </div>
             <div class="sidebar-section">
-                <h3>Base (Python)</h3>
+                <h3>Computer (Python)</h3>
                 <a href="base-overview.html">Overview</a>
                 <a href="base-api.html">API Routes</a>
                 <a href="base-orchestrator.html">Orchestrator</a>
-                <a href="base-agents.html">Agents</a>
+                <a href="base-agents.html">Modules &amp; Agents</a>
                 <a href="base-database.html">Database</a>
-            </div>
-            <div class="sidebar-section">
-                <h3>Planning</h3>
-                <a href="prd-modular-architecture.html">PRD: Modular Architecture</a>
+                <a href="base-connectors.html">Bot Connectors</a>
             </div>
             <div class="sidebar-section">
                 <h3>Reference</h3>
@@ -64,19 +61,19 @@
                 <h2>Summary Statistics</h2>
                 <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1.5rem 0;">
                     <div class="stat-card" style="background: var(--color-surface); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--color-border);">
-                        <div style="font-size: 2rem; font-weight: bold; color: var(--color-primary);">190</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: var(--color-primary);">247</div>
                         <div style="color: var(--color-text-muted);">Flutter App Files</div>
-                        <div style="font-size: 0.85rem; margin-top: 0.5rem;">73,015 lines of Dart</div>
+                        <div style="font-size: 0.85rem; margin-top: 0.5rem;">78,240 lines of Dart</div>
                     </div>
                     <div class="stat-card" style="background: var(--color-surface); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--color-border);">
-                        <div style="font-size: 2rem; font-weight: bold; color: var(--color-primary);">66</div>
-                        <div style="color: var(--color-text-muted);">Python Base Files</div>
-                        <div style="font-size: 0.85rem; margin-top: 0.5rem;">19,871 lines of Python</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: var(--color-primary);">81</div>
+                        <div style="color: var(--color-text-muted);">Python Computer Files</div>
+                        <div style="font-size: 0.85rem; margin-top: 0.5rem;">23,273 lines of Python</div>
                     </div>
                     <div class="stat-card" style="background: var(--color-surface); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--color-border);">
-                        <div style="font-size: 2rem; font-weight: bold; color: var(--color-primary);">256</div>
+                        <div style="font-size: 2rem; font-weight: bold; color: var(--color-primary);">328</div>
                         <div style="color: var(--color-text-muted);">Total Source Files</div>
-                        <div style="font-size: 0.85rem; margin-top: 0.5rem;">92,886 total lines</div>
+                        <div style="font-size: 0.85rem; margin-top: 0.5rem;">101,513 total lines</div>
                     </div>
                 </div>
             </section>
@@ -195,7 +192,7 @@
                         <tr>
                             <td><code>base_server_service.dart</code></td>
                             <td>697</td>
-                            <td>Base server communication</td>
+                            <td>Computer server communication</td>
                         </tr>
                         <tr>
                             <td><code>bundled_server_service.dart</code></td>
@@ -628,7 +625,7 @@
 
             <!-- Python Base -->
             <section class="docs-section">
-                <h2>Python Base (<code>base/parachute/</code>)</h2>
+                <h2>Python Computer (<code>computer/parachute/</code>)</h2>
                 <p>AI orchestration server built with FastAPI.</p>
 
                 <!-- Entry Points -->
@@ -702,9 +699,14 @@
                             <td>Session management endpoints</td>
                         </tr>
                         <tr>
-                            <td><code>api/curator.py</code></td>
-                            <td>281</td>
-                            <td>Curator endpoints</td>
+                            <td><code>api/bots.py</code></td>
+                            <td>298</td>
+                            <td>Bot connector endpoints</td>
+                        </tr>
+                        <tr>
+                            <td><code>api/workspaces.py</code></td>
+                            <td>253</td>
+                            <td>Workspace management endpoints</td>
                         </tr>
                         <tr>
                             <td><code>api/skills.py</code></td>
@@ -800,7 +802,7 @@
                     </tbody>
                 </table>
 
-                <h4>Curator System</h4>
+                <h4>Module System & Connectors</h4>
                 <table class="docs-table">
                     <thead>
                         <tr>
@@ -811,24 +813,39 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td><code>core/curator_service.py</code></td>
-                            <td>1,057</td>
-                            <td>Curator service engine</td>
+                            <td><code>core/module_loader.py</code></td>
+                            <td>240</td>
+                            <td>Module discovery &amp; loading</td>
                         </tr>
                         <tr>
-                            <td><code>core/curator_mcp_server.py</code></td>
-                            <td>249</td>
-                            <td>Curator MCP server</td>
+                            <td><code>core/interfaces.py</code></td>
+                            <td>37</td>
+                            <td>Module interface definitions</td>
                         </tr>
                         <tr>
-                            <td><code>core/curator_mcp_tools.py</code></td>
-                            <td>211</td>
-                            <td>Curator MCP tools</td>
+                            <td><code>core/sandbox.py</code></td>
+                            <td>286</td>
+                            <td>Docker sandbox management</td>
                         </tr>
                         <tr>
-                            <td><code>core/curator_tools.py</code></td>
-                            <td>134</td>
-                            <td>Tool definitions</td>
+                            <td><code>connectors/base.py</code></td>
+                            <td>349</td>
+                            <td>Bot connector base class</td>
+                        </tr>
+                        <tr>
+                            <td><code>connectors/telegram.py</code></td>
+                            <td>707</td>
+                            <td>Telegram bot connector</td>
+                        </tr>
+                        <tr>
+                            <td><code>connectors/discord_bot.py</code></td>
+                            <td>441</td>
+                            <td>Discord bot connector</td>
+                        </tr>
+                        <tr>
+                            <td><code>connectors/config.py</code></td>
+                            <td>71</td>
+                            <td>Bot connector configuration</td>
                         </tr>
                     </tbody>
                 </table>
@@ -852,16 +869,6 @@
                             <td><code>core/daily_agent_tools.py</code></td>
                             <td>384</td>
                             <td>Daily agent tools</td>
-                        </tr>
-                        <tr>
-                            <td><code>core/daily_curator.py</code></td>
-                            <td>335</td>
-                            <td>Daily curator</td>
-                        </tr>
-                        <tr>
-                            <td><code>core/daily_curator_tools.py</code></td>
-                            <td>209</td>
-                            <td>Daily curator tools</td>
                         </tr>
                     </tbody>
                 </table>
@@ -910,11 +917,6 @@
                             <td><code>core/claude_usage.py</code></td>
                             <td>231</td>
                             <td>Token usage tracking</td>
-                        </tr>
-                        <tr>
-                            <td><code>core/import_curator.py</code></td>
-                            <td>216</td>
-                            <td>Import curator</td>
                         </tr>
                         <tr>
                             <td><code>core/context_parser.py</code></td>
@@ -1081,6 +1083,7 @@
     </div>
     <footer>
         <p>&copy; 2026 Open Parachute, PBC. A Colorado Public Benefit Corporation.</p>
+        <p>Documentation last updated: February 9, 2026</p>
     </footer>
 </body>
 </html>

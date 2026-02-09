@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agents | Parachute Documentation</title>
+    <title>Modules &amp; Agents | Parachute Documentation</title>
     <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="docs.css">
 </head>
@@ -35,16 +35,13 @@
                 <a href="app-services.html">Services</a>
             </div>
             <div class="sidebar-section">
-                <h3>Base (Python)</h3>
+                <h3>Computer (Python)</h3>
                 <a href="base-overview.html">Overview</a>
                 <a href="base-api.html">API Routes</a>
                 <a href="base-orchestrator.html">Orchestrator</a>
-                <a href="base-agents.html" class="active">Agents</a>
+                <a href="base-agents.html" class="active">Modules &amp; Agents</a>
                 <a href="base-database.html">Database</a>
-            </div>
-            <div class="sidebar-section">
-                <h3>Planning</h3>
-                <a href="prd-modular-architecture.html">PRD: Modular Architecture</a>
+                <a href="base-connectors.html">Bot Connectors</a>
             </div>
             <div class="sidebar-section">
                 <h3>Reference</h3>
@@ -54,13 +51,209 @@
         </aside>
         <main class="docs-content">
             <div class="breadcrumb">
-                <a href="../index.html">Home</a> / <a href="index.html">Docs</a> / <span>Agents</span>
+                <a href="../index.html">Home</a> / <a href="index.html">Docs</a> / <span>Modules &amp; Agents</span>
             </div>
-            <h1>Agent System</h1>
-            <p class="lead">Parachute's agent system provides custom agents, curator background processing, and scheduled daily agents. Agents can be defined in YAML, JSON, or Markdown with frontmatter, and are discovered automatically from the vault.</p>
+            <h1>Modules &amp; Agents</h1>
+            <p class="lead">Parachute uses a modular architecture where features are loaded as modules from the vault, and custom agents provide specialized AI behaviors. Modules are hash-verified for security; agents are discovered from YAML/Markdown files.</p>
 
+            <!-- Module System -->
             <section class="docs-section">
-                <h2>Agent Types</h2>
+                <h2>Module System</h2>
+                <p>Modules are the primary extension mechanism. Each module lives in <code>vault/.modules/</code> and provides features through a registry interface system.</p>
+
+                <h3>Architecture</h3>
+                <div class="code-block">
+                    <pre>
+┌─────────────────────────────────────────────────────────────┐
+│                      Module System                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  modules/ (bundled, version-controlled)                      │
+│      │                                                       │
+│      └──► Bootstrap → vault/.modules/ (on first startup)     │
+│                                                              │
+│  ModuleLoader (core/module_loader.py)                        │
+│      │                                                       │
+│      ├──► Discover modules in vault/.modules/                │
+│      │                                                       │
+│      ├──► Hash verification (SHA-256)                        │
+│      │       │                                               │
+│      │       ├── New module → auto-approve + record hash     │
+│      │       ├── Hash match → load module                    │
+│      │       └── Hash mismatch → block pending approval      │
+│      │                                                       │
+│      ├──► Load module.py via importlib                       │
+│      │                                                       │
+│      └──► Publish interfaces to registry                     │
+│                                                              │
+│  Registry (core/interfaces.py)                               │
+│      │                                                       │
+│      └──► Interface discovery for cross-module dependencies  │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘</pre>
+                </div>
+
+                <h3>Bundled Modules</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Module</th>
+                            <th>Version</th>
+                            <th>Description</th>
+                            <th>Provides</th>
+                            <th>Requires</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>brain</strong></td>
+                            <td>0.1.0</td>
+                            <td>Knowledge graph entity management</td>
+                            <td><code>BrainInterface</code></td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td><strong>chat</strong></td>
+                            <td>0.1.0</td>
+                            <td>Streaming chat with Claude Agent SDK</td>
+                            <td>—</td>
+                            <td><code>BrainInterface</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>daily</strong></td>
+                            <td>0.1.0</td>
+                            <td>Daily journal entries and agent framework</td>
+                            <td>—</td>
+                            <td><code>BrainInterface</code> (optional)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Module Structure</h3>
+                <div class="code-block">
+                    <pre>
+vault/.modules/
+├── brain/
+│   ├── manifest.yaml      # Module metadata
+│   └── module.py          # Module class with setup() + get_router()
+├── chat/
+│   ├── manifest.yaml
+│   └── module.py
+└── daily/
+    ├── manifest.yaml
+    └── module.py</pre>
+                </div>
+
+                <h3>manifest.yaml Format</h3>
+                <div class="code-block">
+                    <pre>
+# Example: modules/brain/manifest.yaml
+name: brain
+version: "0.1.0"
+description: "Knowledge graph entity management"
+trust_level: full
+provides:
+  - BrainInterface
+
+# Example: modules/chat/manifest.yaml
+name: chat
+version: "0.1.0"
+description: "Streaming chat with Claude Agent SDK"
+trust_level: full
+requires:
+  - BrainInterface
+
+# Example: modules/daily/manifest.yaml
+name: daily
+version: "0.1.0"
+description: "Daily journal entries and agent framework"
+trust_level: full
+optional_requires:
+  - BrainInterface</pre>
+                </div>
+
+                <h3>Manifest Fields</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Field</th>
+                            <th>Type</th>
+                            <th>Required</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>name</code></td>
+                            <td>string</td>
+                            <td>Yes</td>
+                            <td>Module identifier (must match directory name)</td>
+                        </tr>
+                        <tr>
+                            <td><code>version</code></td>
+                            <td>string</td>
+                            <td>Yes</td>
+                            <td>Semantic version</td>
+                        </tr>
+                        <tr>
+                            <td><code>description</code></td>
+                            <td>string</td>
+                            <td>Yes</td>
+                            <td>Human-readable description</td>
+                        </tr>
+                        <tr>
+                            <td><code>trust_level</code></td>
+                            <td>string</td>
+                            <td>No</td>
+                            <td>Required trust: full, vault, sandboxed</td>
+                        </tr>
+                        <tr>
+                            <td><code>provides</code></td>
+                            <td>list</td>
+                            <td>No</td>
+                            <td>Interface names published to registry</td>
+                        </tr>
+                        <tr>
+                            <td><code>requires</code></td>
+                            <td>list</td>
+                            <td>No</td>
+                            <td>Required interfaces (fails if missing)</td>
+                        </tr>
+                        <tr>
+                            <td><code>optional_requires</code></td>
+                            <td>list</td>
+                            <td>No</td>
+                            <td>Optional interfaces (graceful without)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>Hash Verification</h3>
+                <div class="callout callout-info">
+                    <strong>Security:</strong> All Python files and manifest.yaml in a module directory are SHA-256 hashed. New modules are auto-approved on first load. Modified modules are blocked until explicitly approved via CLI.
+                </div>
+                <div class="code-block">
+                    <pre>
+# Module approval workflow
+parachute module list       # See all modules: new/approved/modified
+parachute module approve brain   # Record hash, allow loading
+parachute module status     # Live server module status (online)
+parachute module test       # Test module endpoints (online)
+
+# Hash storage: vault/.parachute/module_hashes.json
+{
+  "brain": "a1b2c3d4e5f6...",
+  "chat": "f6e5d4c3b2a1...",
+  "daily": "1a2b3c4d5e6f..."
+}</pre>
+                </div>
+            </section>
+
+            <!-- Custom Agents -->
+            <section class="docs-section">
+                <h2>Custom Agents</h2>
+                <p>Custom agents are user-defined AI personas discovered from the vault. They're used for Task tool delegation during chat sessions.</p>
+
                 <table>
                     <thead>
                         <tr>
@@ -76,16 +269,6 @@
                             <td><code>.parachute/agents/</code></td>
                         </tr>
                         <tr>
-                            <td><strong>Chat Curator</strong></td>
-                            <td>Background title updates and chat-log maintenance</td>
-                            <td>Built-in (curator_service.py)</td>
-                        </tr>
-                        <tr>
-                            <td><strong>Daily Curator</strong></td>
-                            <td>Morning reflection with music/image generation</td>
-                            <td><code>Daily/.agents/curator.md</code></td>
-                        </tr>
-                        <tr>
                             <td><strong>Daily Agents</strong></td>
                             <td>Scheduled agents processing journal entries</td>
                             <td><code>Daily/.agents/*.md</code></td>
@@ -94,6 +277,7 @@
                 </table>
             </section>
 
+            <!-- Agent Definition Format -->
             <section class="docs-section">
                 <h2>Agent Definition Format</h2>
                 <p>Custom agents are discovered from three file formats:</p>
@@ -175,95 +359,7 @@ You are a code reviewer...</pre>
                 </table>
             </section>
 
-            <section class="docs-section">
-                <h2>Chat Curator</h2>
-                <p>The chat curator is a background agent that runs after each message to maintain session metadata.</p>
-
-                <h3>Curator Task Queue</h3>
-                <div class="code-block">
-                    <pre>
-Message Completes
-        │
-        ▼
-queue_task(parent_session_id, trigger_type, message_count)
-        │
-        ▼
-curator_queue table (status: pending)
-        │
-        ▼
-Worker Loop (FIFO, one at a time)
-        │
-        ├── Fresh curator: Load full transcript from last compact
-        │
-        └── Incremental: Get only new messages
-        │
-        ▼
-Curator Agent Runs (max 5 turns)
-        │
-        ├── update_title - Set session title
-        │
-        ├── get_session_log - Read today's chat-log
-        │
-        └── update_session_log - Write to Daily/chat-log/
-        │
-        ▼
-Status: completed/failed</pre>
-                </div>
-
-                <h3>Curator MCP Tools</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Tool</th>
-                            <th>Purpose</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><code>update_title</code></td>
-                            <td>Update session title (max 100 chars)</td>
-                        </tr>
-                        <tr>
-                            <td><code>get_session_log</code></td>
-                            <td>Read today's chat-log entry</td>
-                        </tr>
-                        <tr>
-                            <td><code>update_session_log</code></td>
-                            <td>Create/update Daily/chat-log/{date}.md</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <h3>Chat Log Format</h3>
-                <div class="code-block">
-                    <pre>
----
-date: 2026-01-28
-entries:
-  rhxo89:
-    type: session
-    created: "14:30"
-    session: uuid-here
-    modified: "14:35"
----
-
-# para:rhxo89 14:30
-
-**Fixing curator MCP tools**
-
-[Open session](parachute://chat/session/uuid-here)
-
-Fixed the curator agent in Parachute's base server...
-
----
-
-# para:abc123 15:00
-
-**Another session**
-...</pre>
-                </div>
-            </section>
-
+            <!-- Daily Agents -->
             <section class="docs-section">
                 <h2>Daily Agents</h2>
                 <p>Daily agents are scheduled to run automatically and process journal entries.</p>
@@ -365,50 +461,7 @@ You are a content scout that discovers valuable insights...</pre>
                 </table>
             </section>
 
-            <section class="docs-section">
-                <h2>Daily Curator (Morning Reflection)</h2>
-                <p>A special daily agent that creates morning reflections with creative media.</p>
-
-                <h3>Default Behavior</h3>
-                <ul>
-                    <li><strong>Timing:</strong> Runs in morning (configurable)</li>
-                    <li><strong>Input:</strong> Yesterday's journal + chat-log</li>
-                    <li><strong>Output:</strong> Daily/reflections/{tomorrow}.md</li>
-                    <li><strong>Creative:</strong> Generates song (Suno) + image (Glif)</li>
-                </ul>
-
-                <h3>Output Format</h3>
-                <div class="code-block">
-                    <pre>
----
-date: 2026-01-28
-generated_at: 2026-01-28T08:15:30.123456+00:00
----
-
-# Today's Reflection
-
-Warm, thoughtful reflection (3-5 paragraphs)
-connecting journal and chat logs...
-
-## Today's Song
-
-[Song Title](https://suno.com/...)
-
-## Today's Image
-
-![State Visualization](https://glif.app/...)</pre>
-                </div>
-
-                <h3>Curator Tools</h3>
-                <ul>
-                    <li><code>read_journal</code> - Yesterday's journal</li>
-                    <li><code>read_chat_log</code> - Yesterday's AI conversations</li>
-                    <li><code>read_recent_journals</code> - Pattern recognition</li>
-                    <li><code>write_reflection</code> - Output to reflections/</li>
-                    <li><strong>Vault MCPs:</strong> Suno (music), Glif (images), search</li>
-                </ul>
-            </section>
-
+            <!-- Scheduler Integration -->
             <section class="docs-section">
                 <h2>Scheduler Integration</h2>
                 <p>Daily agents are scheduled using APScheduler with cron triggers.</p>
@@ -432,7 +485,7 @@ init_scheduler(vault_path)
                 <h3>Status Monitoring</h3>
                 <div class="code-block">
                     <pre>
-get_scheduler_status(vault_path) → {
+GET /api/scheduler/status → {
   "running": true,
   "jobs": [
     {
@@ -454,6 +507,7 @@ get_scheduler_status(vault_path) → {
                 </div>
             </section>
 
+            <!-- State Persistence -->
             <section class="docs-section">
                 <h2>State Persistence</h2>
                 <p>Agent state is persisted for session continuity across runs.</p>
@@ -473,24 +527,9 @@ get_scheduler_status(vault_path) → {
   "created_at": "2026-01-01T12:00:00+00:00"
 }</pre>
                 </div>
-
-                <h3>Curator State</h3>
-                <div class="code-block">
-                    <pre>
-# Daily/.curator/state.json
-{
-  "module": "daily",
-  "backend": "claude-sdk",
-  "sdk_session_id": null,
-  "model": null,
-  "last_run_at": "2026-01-28T10:30:00+00:00",
-  "last_processed_date": "2026-01-27",
-  "run_count": 28,
-  "created_at": "2026-01-01T12:00:00+00:00"
-}</pre>
-                </div>
             </section>
 
+            <!-- User Context System -->
             <section class="docs-section">
                 <h2>User Context System</h2>
                 <p>Agents can be personalized with user context loaded from the vault.</p>
@@ -517,6 +556,7 @@ load_user_context(vault_path) → (user_name, context_text)
                 </ul>
             </section>
 
+            <!-- Tool Availability -->
             <section class="docs-section">
                 <h2>Tool Availability by Agent Type</h2>
                 <table>
@@ -530,16 +570,10 @@ load_user_context(vault_path) → (user_name, context_text)
                     </thead>
                     <tbody>
                         <tr>
-                            <td>Chat Curator</td>
-                            <td>update_title, get_session_log, update_session_log</td>
-                            <td>curator (stdio)</td>
-                            <td>Yes</td>
-                        </tr>
-                        <tr>
-                            <td>Daily Curator</td>
-                            <td>read_journal, read_chat_log, read_recent_journals, write_reflection</td>
-                            <td>daily_curator + vault MCPs</td>
-                            <td>Yes</td>
+                            <td>Custom Agent</td>
+                            <td>As defined in config</td>
+                            <td>None (SDK inline)</td>
+                            <td>No</td>
                         </tr>
                         <tr>
                             <td>Daily Agent</td>
@@ -547,16 +581,11 @@ load_user_context(vault_path) → (user_name, context_text)
                             <td>daily_{name} + vault MCPs</td>
                             <td>Yes</td>
                         </tr>
-                        <tr>
-                            <td>Custom Agent</td>
-                            <td>As defined in config</td>
-                            <td>None (SDK inline)</td>
-                            <td>No</td>
-                        </tr>
                     </tbody>
                 </table>
             </section>
 
+            <!-- Key Files -->
             <section class="docs-section">
                 <h2>Key Files</h2>
                 <table>
@@ -568,77 +597,83 @@ load_user_context(vault_path) → (user_name, context_text)
                     </thead>
                     <tbody>
                         <tr>
-                            <td><code>agents.py</code></td>
-                            <td>Agent discovery and definition parsing</td>
+                            <td><code>core/module_loader.py</code></td>
+                            <td>Module discovery, hash verification, bootstrap, loading</td>
                         </tr>
                         <tr>
-                            <td><code>agent_loader.py</code></td>
+                            <td><code>core/interfaces.py</code></td>
+                            <td>Interface registry for cross-module dependencies</td>
+                        </tr>
+                        <tr>
+                            <td><code>core/agents.py</code></td>
+                            <td>Custom agent discovery and definition parsing</td>
+                        </tr>
+                        <tr>
+                            <td><code>core/agent_loader.py</code></td>
                             <td>Extended agent parsing with permissions/constraints</td>
                         </tr>
                         <tr>
-                            <td><code>curator_service.py</code></td>
-                            <td>Chat curator with task queue and MCP integration</td>
-                        </tr>
-                        <tr>
-                            <td><code>curator_mcp_server.py</code></td>
-                            <td>Stdio MCP server for curator tools</td>
-                        </tr>
-                        <tr>
-                            <td><code>daily_curator.py</code></td>
-                            <td>Morning reflection agent with Suno/Glif</td>
-                        </tr>
-                        <tr>
-                            <td><code>daily_agent.py</code></td>
+                            <td><code>core/daily_agent.py</code></td>
                             <td>Generic daily agent framework</td>
                         </tr>
                         <tr>
-                            <td><code>daily_agent_tools.py</code></td>
+                            <td><code>core/daily_agent_tools.py</code></td>
                             <td>MCP tools for daily agents</td>
                         </tr>
                         <tr>
-                            <td><code>scheduler.py</code></td>
+                            <td><code>core/scheduler.py</code></td>
                             <td>APScheduler integration with cron triggers</td>
+                        </tr>
+                        <tr>
+                            <td><code>api/modules.py</code></td>
+                            <td>Module management API endpoints</td>
+                        </tr>
+                        <tr>
+                            <td><code>api/scheduler.py</code></td>
+                            <td>Scheduler status and trigger API</td>
                         </tr>
                     </tbody>
                 </table>
             </section>
 
+            <!-- Architecture Summary -->
             <section class="docs-section">
                 <h2>Architecture Summary</h2>
                 <div class="code-block">
                     <pre>
-┌─────────────────────────────────────────────────────────┐
-│                    Agent System                         │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  Custom Agents (.parachute/agents/)                     │
-│      │                                                  │
-│      └──► Task Tool Delegation                          │
-│                                                         │
-│  Chat Curator (built-in)                                │
-│      │                                                  │
-│      ├──► curator_queue (FIFO)                          │
-│      │                                                  │
-│      └──► Title Updates + Chat Log                      │
-│                                                         │
-│  Daily Agents (Daily/.agents/)                          │
-│      │                                                  │
-│      ├──► APScheduler (cron)                            │
-│      │                                                  │
-│      └──► Journal Processing → Output                   │
-│                                                         │
-│  Daily Curator                                          │
-│      │                                                  │
-│      └──► Morning Reflection + Media                    │
-│                                                         │
-└─────────────────────────────────────────────────────────┘</pre>
+┌─────────────────────────────────────────────────────────────┐
+│                  Modules &amp; Agents                           │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Module System (vault/.modules/)                             │
+│      │                                                       │
+│      ├──► brain → Knowledge graph, entity search             │
+│      ├──► chat  → Streaming chat via Claude SDK              │
+│      └──► daily → Journal entries, daily agent framework     │
+│                                                              │
+│  Custom Agents (.parachute/agents/)                          │
+│      │                                                       │
+│      └──► Task Tool Delegation in chat sessions              │
+│                                                              │
+│  Daily Agents (Daily/.agents/)                               │
+│      │                                                       │
+│      ├──► APScheduler (cron)                                 │
+│      │                                                       │
+│      └──► Journal Processing → Output                        │
+│                                                              │
+│  Hash Verification                                           │
+│      │                                                       │
+│      └──► SHA-256 of Python files + manifest                 │
+│           New → auto-approve, Modified → block until CLI     │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘</pre>
                 </div>
             </section>
 
             <div class="nav-cards">
                 <a href="base-orchestrator.html" class="nav-card">
                     <h3>Orchestrator</h3>
-                    <p>Agent execution and streaming.</p>
+                    <p>Agent execution, streaming, and trust enforcement.</p>
                 </a>
                 <a href="base-database.html" class="nav-card">
                     <h3>Database</h3>
